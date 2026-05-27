@@ -1,0 +1,368 @@
+{
+  "name": "orbit",
+  "displayName": "Orbit",
+  "description": "MCP health monitoring, debug session history, and A2A agent explorer for developers.",
+  "version": "0.1.0",
+  "publisher": "oaslananka",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.100.0",
+    "node": ">=22.0.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "keywords": [
+    "mcp",
+    "a2a",
+    "agent",
+    "debug",
+    "health",
+    "monitor",
+    "devtools"
+  ],
+  "icon": "media/icon.png",
+  "main": "./dist/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oaslananka/orbit-vsx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/oaslananka/orbit-vsx/issues"
+  },
+  "homepage": "https://github.com/oaslananka/orbit-vsx#readme",
+  "packageManager": "pnpm@11.4.0",
+  "activationEvents": [
+    "onView:orbit.health",
+    "onView:orbit.debug",
+    "onView:orbit.a2a",
+    "onCommand:orbit.health.refresh",
+    "onCommand:orbit.debug.newSession",
+    "onCommand:orbit.a2a.validate"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "orbit",
+          "title": "Orbit",
+          "icon": "media/orbit.svg"
+        }
+      ]
+    },
+    "views": {
+      "orbit": [
+        {
+          "id": "orbit.health",
+          "name": "Health Monitor",
+          "icon": "$(pulse)",
+          "contextualTitle": "MCP Health"
+        },
+        {
+          "id": "orbit.debug",
+          "name": "Debug Recorder",
+          "icon": "$(bug)",
+          "contextualTitle": "Debug Sessions"
+        },
+        {
+          "id": "orbit.a2a",
+          "name": "A2A Explorer",
+          "icon": "$(graph)",
+          "contextualTitle": "A2A Agents"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "orbit.health.refresh",
+        "title": "Refresh",
+        "category": "Orbit: Health",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "orbit.health.addServer",
+        "title": "Add Server",
+        "category": "Orbit: Health",
+        "icon": "$(add)"
+      },
+      {
+        "command": "orbit.health.removeServer",
+        "title": "Remove Server",
+        "category": "Orbit: Health",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "orbit.health.openDetail",
+        "title": "Open Detail",
+        "category": "Orbit: Health"
+      },
+      {
+        "command": "orbit.health.checkAll",
+        "title": "Check All Servers",
+        "category": "Orbit: Health"
+      },
+      {
+        "command": "orbit.debug.newSession",
+        "title": "New Session",
+        "category": "Orbit: Debug",
+        "icon": "$(add)"
+      },
+      {
+        "command": "orbit.debug.refresh",
+        "title": "Refresh",
+        "category": "Orbit: Debug",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "orbit.debug.openSession",
+        "title": "Open Session",
+        "category": "Orbit: Debug"
+      },
+      {
+        "command": "orbit.debug.closeSession",
+        "title": "Close Session",
+        "category": "Orbit: Debug"
+      },
+      {
+        "command": "orbit.debug.search",
+        "title": "Search Sessions",
+        "category": "Orbit: Debug",
+        "icon": "$(search)"
+      },
+      {
+        "command": "orbit.debug.recordCommand",
+        "title": "Record Terminal Command",
+        "category": "Orbit: Debug"
+      },
+      {
+        "command": "orbit.a2a.refresh",
+        "title": "Refresh",
+        "category": "Orbit: A2A",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "orbit.a2a.validate",
+        "title": "Validate Agent Card",
+        "category": "Orbit: A2A",
+        "icon": "$(check)"
+      },
+      {
+        "command": "orbit.a2a.discover",
+        "title": "Discover Agents",
+        "category": "Orbit: A2A",
+        "icon": "$(search)"
+      },
+      {
+        "command": "orbit.a2a.scaffold",
+        "title": "Scaffold Agent",
+        "category": "Orbit: A2A",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "orbit.a2a.openCard",
+        "title": "Open Agent Card",
+        "category": "Orbit: A2A"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "orbit.health.refresh",
+          "when": "view == orbit.health",
+          "group": "navigation"
+        },
+        {
+          "command": "orbit.health.addServer",
+          "when": "view == orbit.health",
+          "group": "navigation"
+        },
+        {
+          "command": "orbit.debug.newSession",
+          "when": "view == orbit.debug",
+          "group": "navigation"
+        },
+        {
+          "command": "orbit.debug.search",
+          "when": "view == orbit.debug",
+          "group": "navigation"
+        },
+        {
+          "command": "orbit.debug.refresh",
+          "when": "view == orbit.debug",
+          "group": "navigation"
+        },
+        {
+          "command": "orbit.a2a.refresh",
+          "when": "view == orbit.a2a",
+          "group": "navigation"
+        },
+        {
+          "command": "orbit.a2a.validate",
+          "when": "view == orbit.a2a",
+          "group": "navigation"
+        },
+        {
+          "command": "orbit.a2a.discover",
+          "when": "view == orbit.a2a",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "orbit.health.removeServer",
+          "when": "view == orbit.health && viewItem == mcpServer",
+          "group": "inline"
+        },
+        {
+          "command": "orbit.health.openDetail",
+          "when": "view == orbit.health && viewItem == mcpServer"
+        },
+        {
+          "command": "orbit.debug.closeSession",
+          "when": "view == orbit.debug && viewItem == debugSession"
+        },
+        {
+          "command": "orbit.a2a.openCard",
+          "when": "view == orbit.a2a && viewItem == a2aAgent"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "orbit.a2a.validate",
+          "when": "resourceFilename =~ /agent-card\\.json$/",
+          "group": "orbit"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "orbit.health.openDetail",
+          "when": "false"
+        },
+        {
+          "command": "orbit.debug.openSession",
+          "when": "false"
+        },
+        {
+          "command": "orbit.a2a.openCard",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Orbit",
+      "properties": {
+        "orbit.health.endpoint": {
+          "type": "string",
+          "default": "http://127.0.0.1:3000",
+          "description": "HTTP endpoint for health-monitor-mcp server."
+        },
+        "orbit.health.token": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Bearer token for health-monitor-mcp. Store in `settings.json` or use VS Code secrets.",
+          "secret": true
+        },
+        "orbit.health.pollingIntervalSeconds": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "description": "How often to poll health status automatically."
+        },
+        "orbit.health.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Health Monitor panel."
+        },
+        "orbit.debug.endpoint": {
+          "type": "string",
+          "default": "http://127.0.0.1:3001",
+          "description": "HTTP endpoint for debug-recorder-mcp server."
+        },
+        "orbit.debug.token": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Bearer token for debug-recorder-mcp.",
+          "secret": true
+        },
+        "orbit.debug.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Debug Recorder panel."
+        },
+        "orbit.debug.maxSessionsShown": {
+          "type": "number",
+          "default": 50,
+          "minimum": 10,
+          "maximum": 500,
+          "description": "Maximum number of debug sessions shown in the tree."
+        },
+        "orbit.debug.autoTrackVscodeSessions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Offer to create and close Debug Recorder sessions when VS Code debug sessions start and stop."
+        },
+        "orbit.a2a.registryUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:3099",
+          "description": "a2a-warp registry server URL."
+        },
+        "orbit.a2a.cliPath": {
+          "type": "string",
+          "default": "a2a-warp",
+          "description": "Path to the a2a-warp CLI executable."
+        },
+        "orbit.a2a.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the A2A Explorer panel."
+        },
+        "orbit.a2a.autoValidateOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-validate agent-card.json files on save."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run build:prod",
+    "build": "node esbuild.js && node esbuild-webview.js",
+    "build:prod": "node esbuild.js --production && node esbuild-webview.js --production",
+    "watch": "concurrently \"node esbuild.js --watch\" \"node esbuild-webview.js --watch\"",
+    "typecheck": "pnpm run typecheck:extension && pnpm run typecheck:webview && pnpm run typecheck:test",
+    "typecheck:extension": "tsc --noEmit",
+    "typecheck:webview": "tsc -p webview-ui/tsconfig.json --noEmit",
+    "typecheck:test": "tsc -p test/tsconfig.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"webview-ui/src/**/*.{ts,tsx}\" \"test/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" \"webview-ui/src/**/*.{ts,tsx}\" \"test/**/*.ts\" --fix",
+    "format:check": "prettier --check \"**/*.{json,md,yml,ts,tsx,js,mjs}\"",
+    "format": "prettier --write \"**/*.{json,md,yml,ts,tsx,js,mjs}\"",
+    "test": "node ./test/runTests.js",
+    "package": "pnpm run build:prod && pnpm exec vsce package --no-dependencies",
+    "deploy:marketplace": "pnpm exec vsce publish --no-dependencies",
+    "deploy:ovsx": "pnpm exec ovsx publish --no-dependencies",
+    "pretest": "pnpm run build"
+  },
+  "dependencies": {
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/vscode": "1.100.0",
+    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "@typescript-eslint/parser": "^8.60.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.9.1",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.28.0",
+    "eslint": "^9.0.0",
+    "ovsx": "^0.10.12",
+    "prettier": "^3.0.0",
+    "typescript": "^5.8.0"
+  }
+}

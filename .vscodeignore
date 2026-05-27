@@ -1,0 +1,17 @@
+.github/
+.vscode/
+src/
+webview-ui/
+test/
+node_modules/
+**/*.map
+**/*.ts
+!dist/**
+esbuild.js
+esbuild-webview.js
+tsconfig.json
+eslint.config.mjs
+.eslintrc.json
+.prettierrc
+pnpm-lock.yaml
+.codex-checkpoints/
