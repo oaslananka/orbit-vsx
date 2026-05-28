@@ -1,5 +1,6 @@
 .github/
 .vscode/
+.omo/
 src/
 webview-ui/
 test/
@@ -14,4 +15,8 @@ eslint.config.mjs
 .eslintrc.json
 .prettierrc
 pnpm-lock.yaml
+pnpm-workspace.yaml
 .codex-checkpoints/
+.gitignore
+renovate.json
+*.vsix

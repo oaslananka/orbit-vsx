@@ -11,7 +11,7 @@
     "noUnusedParameters": true,
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node", "mocha"]
   },
   "include": ["suite/**/*.ts"],
   "exclude": ["node_modules", "../dist"]

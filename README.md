@@ -20,11 +20,11 @@ Browse your A2A agent registry, validate Agent Card files on save, and scaffold 
 
 Each panel requires its corresponding MCP server or tool to be running:
 
-| Panel | Requires |
-| --- | --- |
+| Panel          | Requires                                            |
+| -------------- | --------------------------------------------------- |
 | Health Monitor | `health-monitor-mcp` running at configured endpoint |
 | Debug Recorder | `debug-recorder-mcp` running at configured endpoint |
-| A2A Explorer | `a2a-warp` CLI installed and registry running |
+| A2A Explorer   | `a2a-warp` CLI installed and registry running       |
 
 Panels can be enabled or disabled independently.
 
