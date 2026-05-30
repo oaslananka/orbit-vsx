@@ -6,7 +6,9 @@ import { StatusBarController } from './statusbar/StatusBarController';
 import { registerHealthCommands } from './commands/health';
 import { registerDebugCommands } from './commands/debug';
 import { registerA2ACommands } from './commands/a2a';
+import { registerMcpCommands } from './commands/mcp';
 import { registerSessionCommands } from './commands/sessions';
+import { McpExplorerProvider } from './panels/mcp/McpExplorerProvider';
 import { Logger } from './utils/logger';
 import { readConfig } from './config';
 
@@ -19,17 +21,20 @@ export function activate(context: vscode.ExtensionContext): void {
   const healthProvider = new HealthProvider(context);
   const debugProvider = new DebugProvider(context);
   const a2aProvider = new A2AProvider(context);
+  const mcpProvider = new McpExplorerProvider();
   const statusBar = new StatusBarController(healthProvider);
 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('orbit.health', healthProvider),
     vscode.window.registerTreeDataProvider('orbit.debug', debugProvider),
-    vscode.window.registerTreeDataProvider('orbit.a2a', a2aProvider)
+    vscode.window.registerTreeDataProvider('orbit.a2a', a2aProvider),
+    vscode.window.registerTreeDataProvider('orbit.mcp.explorer', mcpProvider)
   );
 
   registerHealthCommands(context, healthProvider);
   registerDebugCommands(context, debugProvider);
   registerA2ACommands(context, a2aProvider);
+  registerMcpCommands(context, mcpProvider);
   registerSessionCommands(context);
 
   statusBar.start();

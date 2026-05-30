@@ -3,6 +3,7 @@ export const VIEW_IDS = {
   DEBUG: 'orbit.debug',
   A2A: 'orbit.a2a',
   INFO: 'orbit.info',
+  MCP_EXPLORER: 'orbit.mcp.explorer',
   SESSIONS: 'orbit.sessions',
   TASKS: 'orbit.tasks',
 } as const;
@@ -24,6 +25,7 @@ export const COMMAND_IDS = {
   A2A_DISCOVER: 'orbit.a2a.discover',
   A2A_SCAFFOLD: 'orbit.a2a.scaffold',
   A2A_OPEN_CARD: 'orbit.a2a.openCard',
+  MCP_EXPLORER_REFRESH: 'orbit.mcp.explorer.refresh',
   SESSIONS_REFRESH: 'orbit.sessions.refresh',
 } as const;
 

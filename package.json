@@ -41,10 +41,12 @@
     "onView:orbit.health",
     "onView:orbit.debug",
     "onView:orbit.a2a",
+    "onView:orbit.mcp.explorer",
     "onView:orbit.sessions",
     "onCommand:orbit.health.refresh",
     "onCommand:orbit.debug.newSession",
     "onCommand:orbit.a2a.validate",
+    "onCommand:orbit.mcp.explorer.refresh",
     "onCommand:orbit.sessions.refresh"
   ],
   "contributes": {
@@ -76,6 +78,11 @@
           "name": "A2A Explorer",
           "icon": "$(graph)",
           "contextualTitle": "A2A Agents"
+        },
+        {
+          "id": "orbit.mcp.explorer",
+          "name": "MCP Explorer",
+          "icon": "$(plug)"
         },
         {
           "id": "orbit.info",
@@ -186,6 +193,12 @@
         "category": "Orbit: A2A"
       },
       {
+        "command": "orbit.mcp.explorer.refresh",
+        "title": "Refresh",
+        "category": "Orbit: MCP",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "orbit.sessions.refresh",
         "title": "Refresh",
         "category": "Orbit: Sessions",
@@ -232,6 +245,11 @@
         {
           "command": "orbit.a2a.discover",
           "when": "view == orbit.a2a",
+          "group": "navigation"
+        },
+        {
+          "command": "orbit.mcp.explorer.refresh",
+          "when": "view == orbit.mcp.explorer",
           "group": "navigation"
         },
         {
