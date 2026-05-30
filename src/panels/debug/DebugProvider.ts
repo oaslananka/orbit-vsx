@@ -17,6 +17,7 @@ class DebugGroupItem extends vscode.TreeItem {
         ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None
     );
+    this.id = `debug-group:${label}`;
     this.contextValue = 'debugGroup';
   }
 }
@@ -30,6 +31,7 @@ class DebugSessionItem extends vscode.TreeItem {
       resolved: new vscode.ThemeIcon('check', new vscode.ThemeColor('charts.green')),
       abandoned: new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red')),
     };
+    this.id = `debug-session:${session.id}`;
     this.iconPath = iconMap[session.status] ?? iconMap.open;
 
     this.description = session.createdAt;

@@ -17,6 +17,7 @@ class A2ARegistryItem extends vscode.TreeItem {
         ? vscode.TreeItemCollapsibleState.Collapsed
         : vscode.TreeItemCollapsibleState.None
     );
+    this.id = `a2a-registry:${registryUrl}`;
     this.iconPath = new vscode.ThemeIcon('cloud');
     this.contextValue = 'a2aRegistry';
   }
@@ -26,6 +27,7 @@ class A2AAgentItem extends vscode.TreeItem {
   constructor(public readonly entry: AgentRegistryEntry) {
     const card = entry.card;
     super(`${card.name}  v${card.version}`, vscode.TreeItemCollapsibleState.None);
+    this.id = `a2a-agent:${card.name}`;
     this.iconPath = entry.online
       ? new vscode.ThemeIcon('circuit-board')
       : new vscode.ThemeIcon('circuit-board', new vscode.ThemeColor('charts.red'));
@@ -44,6 +46,7 @@ class A2AAgentItem extends vscode.TreeItem {
 class A2ALocalCardItem extends vscode.TreeItem {
   constructor(filePath: string) {
     super(filePath, vscode.TreeItemCollapsibleState.None);
+    this.id = `a2a-local:${filePath}`;
     this.iconPath = new vscode.ThemeIcon('file');
     this.description = 'local card';
     this.contextValue = 'a2aLocalCard';

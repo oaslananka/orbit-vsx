@@ -14,6 +14,7 @@ class McpConnectionItem extends vscode.TreeItem {
       down: new vscode.ThemeIcon('plug', new vscode.ThemeColor('charts.red')),
       degraded: new vscode.ThemeIcon('plug', new vscode.ThemeColor('charts.yellow')),
     };
+    this.id = `mcp-connection:${server.name}`;
     this.iconPath = iconMap[server.status] ?? iconMap.degraded;
 
     this.description = `${server.url} — ${server.latencyMs}ms`;

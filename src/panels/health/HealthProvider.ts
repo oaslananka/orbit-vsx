@@ -15,6 +15,7 @@ class McpServerItem extends vscode.TreeItem {
       down: new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red')),
       degraded: new vscode.ThemeIcon('warning', new vscode.ThemeColor('charts.yellow')),
     };
+    this.id = `mcp-server:${server.name}`;
     this.iconPath = iconMap[server.status] ?? iconMap.degraded;
 
     this.description = `${server.latencyMs}ms`;
