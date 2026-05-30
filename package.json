@@ -373,6 +373,26 @@
           "type": "boolean",
           "default": true,
           "description": "Auto-validate agent-card.json files on save."
+        },
+        "orbit.mcp.explorer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the MCP Explorer panel."
+        },
+        "orbit.info.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Info panel."
+        },
+        "orbit.sessions.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Sessions panel."
+        },
+        "orbit.tasks.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Tasks panel."
         }
       }
     }

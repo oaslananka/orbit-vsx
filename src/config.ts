@@ -21,6 +21,18 @@ export interface OrbitConfig {
     enabled: boolean;
     autoValidateOnSave: boolean;
   };
+  mcpExplorer: {
+    enabled: boolean;
+  };
+  info: {
+    enabled: boolean;
+  };
+  sessions: {
+    enabled: boolean;
+  };
+  tasks: {
+    enabled: boolean;
+  };
 }
 
 export function readConfig(): OrbitConfig {
@@ -44,6 +56,18 @@ export function readConfig(): OrbitConfig {
       cliPath: config.get<string>(CONFIG_KEYS.A2A_CLI_PATH, 'a2a-warp'),
       enabled: config.get<boolean>(CONFIG_KEYS.A2A_ENABLED, true),
       autoValidateOnSave: config.get<boolean>(CONFIG_KEYS.A2A_AUTO_VALIDATE, true),
+    },
+    mcpExplorer: {
+      enabled: config.get<boolean>(CONFIG_KEYS.MCP_EXPLORER_ENABLED, true),
+    },
+    info: {
+      enabled: config.get<boolean>(CONFIG_KEYS.INFO_ENABLED, true),
+    },
+    sessions: {
+      enabled: config.get<boolean>(CONFIG_KEYS.SESSIONS_ENABLED, true),
+    },
+    tasks: {
+      enabled: config.get<boolean>(CONFIG_KEYS.TASKS_ENABLED, true),
     },
   };
 }

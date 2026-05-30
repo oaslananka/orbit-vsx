@@ -43,6 +43,10 @@ export const CONFIG_KEYS = {
   A2A_CLI_PATH: 'orbit.a2a.cliPath',
   A2A_ENABLED: 'orbit.a2a.enabled',
   A2A_AUTO_VALIDATE: 'orbit.a2a.autoValidateOnSave',
+  MCP_EXPLORER_ENABLED: 'orbit.mcp.explorer.enabled',
+  INFO_ENABLED: 'orbit.info.enabled',
+  SESSIONS_ENABLED: 'orbit.sessions.enabled',
+  TASKS_ENABLED: 'orbit.tasks.enabled',
 } as const;
 
 export const VIEW_ITEM_CONTEXT = {
