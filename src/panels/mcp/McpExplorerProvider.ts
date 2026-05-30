@@ -93,6 +93,11 @@ export class McpExplorerProvider
       errItem.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
       return [errItem];
     }
+    if (this.servers.length === 0) {
+      const emptyItem = new vscode.TreeItem('No MCP connections');
+      emptyItem.description = 'Check health monitor endpoint configuration';
+      return [emptyItem];
+    }
     return this.servers.map((s) => new McpConnectionItem(s));
   }
 

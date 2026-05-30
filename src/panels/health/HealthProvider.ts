@@ -160,6 +160,11 @@ export class HealthProvider
       errItem.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
       return [errItem];
     }
+    if (this.servers.length === 0) {
+      const emptyItem = new vscode.TreeItem('No servers registered');
+      emptyItem.description = 'Add a server to begin monitoring';
+      return [emptyItem];
+    }
     return this.servers.map((s) => new McpServerItem(s));
   }
 
