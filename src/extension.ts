@@ -9,6 +9,7 @@ import { registerA2ACommands } from './commands/a2a';
 import { registerMcpCommands } from './commands/mcp';
 import { registerSessionCommands } from './commands/sessions';
 import { McpExplorerProvider } from './panels/mcp/McpExplorerProvider';
+import { DebugDecorationProvider } from './decorations/DebugDecorationProvider';
 import { Logger } from './utils/logger';
 import { readConfig } from './config';
 
@@ -69,6 +70,11 @@ export function activate(context: vscode.ExtensionContext): void {
   registerSessionCommands(context);
 
   statusBar.start();
+
+  if (config.debug.showEditorDecorations) {
+    const decorationProvider = new DebugDecorationProvider(debugProvider.getClient());
+    context.subscriptions.push(decorationProvider);
+  }
 
   if (config.debug.autoTrackVscodeSessions) {
     context.subscriptions.push(

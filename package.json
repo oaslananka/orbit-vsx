@@ -402,6 +402,11 @@
           "default": false,
           "description": "Offer to create and close Debug Recorder sessions when VS Code debug sessions start and stop."
         },
+        "orbit.debug.showEditorDecorations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show debug session frequency hints inline in the editor."
+        },
         "orbit.a2a.registryUrl": {
           "type": "string",
           "default": "http://127.0.0.1:3099",

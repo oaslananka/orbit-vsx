@@ -41,6 +41,7 @@ export const CONFIG_KEYS = {
   DEBUG_ENABLED: 'orbit.debug.enabled',
   DEBUG_MAX_SESSIONS: 'orbit.debug.maxSessionsShown',
   DEBUG_AUTO_TRACK: 'orbit.debug.autoTrackVscodeSessions',
+  DEBUG_SHOW_EDITOR_DECORATIONS: 'orbit.debug.showEditorDecorations',
   A2A_REGISTRY_URL: 'orbit.a2a.registryUrl',
   A2A_CLI_PATH: 'orbit.a2a.cliPath',
   A2A_ENABLED: 'orbit.a2a.enabled',

@@ -16,6 +16,7 @@ export interface OrbitConfig {
     enabled: boolean;
     maxSessionsShown: number;
     autoTrackVscodeSessions: boolean;
+    showEditorDecorations: boolean;
   };
   a2a: {
     registryUrl: string;
@@ -54,6 +55,7 @@ export function readConfig(): OrbitConfig {
       enabled: config.get<boolean>(CONFIG_KEYS.DEBUG_ENABLED, true),
       maxSessionsShown: config.get<number>(CONFIG_KEYS.DEBUG_MAX_SESSIONS, 50),
       autoTrackVscodeSessions: config.get<boolean>(CONFIG_KEYS.DEBUG_AUTO_TRACK, false),
+      showEditorDecorations: config.get<boolean>(CONFIG_KEYS.DEBUG_SHOW_EDITOR_DECORATIONS, true),
     },
     a2a: {
       registryUrl: config.get<string>(CONFIG_KEYS.A2A_REGISTRY_URL, 'http://127.0.0.1:3099'),
