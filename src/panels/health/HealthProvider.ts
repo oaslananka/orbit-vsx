@@ -176,6 +176,10 @@ export class HealthProvider
     return this.servers.map((s) => new McpServerItem(s));
   }
 
+  getCount(): number {
+    return this.servers.length;
+  }
+
   onConfigChanged(): void {
     this.rebuildClient();
     this.startPolling();

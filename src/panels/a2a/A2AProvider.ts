@@ -200,6 +200,10 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
     return [];
   }
 
+  getCount(): number {
+    return this.entries.length;
+  }
+
   onConfigChanged(): void {
     this.rebuildClient();
   }

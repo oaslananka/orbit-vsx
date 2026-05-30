@@ -163,6 +163,10 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
     return [];
   }
 
+  getCount(): number {
+    return this.sessions.length;
+  }
+
   onConfigChanged(): void {
     this.rebuildClient();
   }

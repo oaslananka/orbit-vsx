@@ -128,6 +128,10 @@ export class McpExplorerProvider
     this._onDidChangeTreeData.fire(undefined);
   }
 
+  getCount(): number {
+    return this.servers.length;
+  }
+
   dispose(): void {
     // nothing to dispose
   }

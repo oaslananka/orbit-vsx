@@ -24,24 +24,43 @@ export function activate(context: vscode.ExtensionContext): void {
   const mcpProvider = new McpExplorerProvider();
   const statusBar = new StatusBarController(healthProvider);
 
-  context.subscriptions.push(
-    vscode.window.createTreeView('orbit.health', {
-      treeDataProvider: healthProvider,
-      showCollapseAll: false,
-    }),
-    vscode.window.createTreeView('orbit.debug', {
-      treeDataProvider: debugProvider,
-      showCollapseAll: true,
-    }),
-    vscode.window.createTreeView('orbit.a2a', {
-      treeDataProvider: a2aProvider,
-      showCollapseAll: true,
-    }),
-    vscode.window.createTreeView('orbit.mcp.explorer', {
-      treeDataProvider: mcpProvider,
-      showCollapseAll: false,
-    })
-  );
+  const healthTree = vscode.window.createTreeView('orbit.health', {
+    treeDataProvider: healthProvider,
+    showCollapseAll: false,
+  });
+  const debugTree = vscode.window.createTreeView('orbit.debug', {
+    treeDataProvider: debugProvider,
+    showCollapseAll: true,
+  });
+  const a2aTree = vscode.window.createTreeView('orbit.a2a', {
+    treeDataProvider: a2aProvider,
+    showCollapseAll: true,
+  });
+  const mcpTree = vscode.window.createTreeView('orbit.mcp.explorer', {
+    treeDataProvider: mcpProvider,
+    showCollapseAll: false,
+  });
+
+  const updateViewDescriptions = (): void => {
+    healthTree.description = `${healthProvider.getCount()} server${healthProvider.getCount() !== 1 ? 's' : ''}`;
+    debugTree.description = `${debugProvider.getCount()} session${debugProvider.getCount() !== 1 ? 's' : ''}`;
+    a2aTree.description = `${a2aProvider.getCount()} agent${a2aProvider.getCount() !== 1 ? 's' : ''}`;
+    mcpTree.description = `${mcpProvider.getCount()} connection${mcpProvider.getCount() !== 1 ? 's' : ''}`;
+  };
+
+  const guard = <T>(fn: () => T): void => {
+    try {
+      fn();
+    } catch {
+      /* noop */
+    }
+  };
+  healthProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
+  debugProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
+  a2aProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
+  mcpProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
+
+  context.subscriptions.push(healthTree, debugTree, a2aTree, mcpTree);
 
   registerHealthCommands(context, healthProvider);
   registerDebugCommands(context, debugProvider);
