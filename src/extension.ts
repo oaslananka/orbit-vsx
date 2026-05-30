@@ -6,6 +6,7 @@ import { StatusBarController } from './statusbar/StatusBarController';
 import { registerHealthCommands } from './commands/health';
 import { registerDebugCommands } from './commands/debug';
 import { registerA2ACommands } from './commands/a2a';
+import { registerSessionCommands } from './commands/sessions';
 import { Logger } from './utils/logger';
 import { readConfig } from './config';
 
@@ -29,6 +30,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerHealthCommands(context, healthProvider);
   registerDebugCommands(context, debugProvider);
   registerA2ACommands(context, a2aProvider);
+  registerSessionCommands(context);
 
   statusBar.start();
 

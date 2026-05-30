@@ -2,6 +2,9 @@ export const VIEW_IDS = {
   HEALTH: 'orbit.health',
   DEBUG: 'orbit.debug',
   A2A: 'orbit.a2a',
+  INFO: 'orbit.info',
+  SESSIONS: 'orbit.sessions',
+  TASKS: 'orbit.tasks',
 } as const;
 
 export const COMMAND_IDS = {
@@ -21,6 +24,7 @@ export const COMMAND_IDS = {
   A2A_DISCOVER: 'orbit.a2a.discover',
   A2A_SCAFFOLD: 'orbit.a2a.scaffold',
   A2A_OPEN_CARD: 'orbit.a2a.openCard',
+  SESSIONS_REFRESH: 'orbit.sessions.refresh',
 } as const;
 
 export const CONFIG_KEYS = {

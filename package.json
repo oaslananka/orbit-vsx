@@ -41,9 +41,11 @@
     "onView:orbit.health",
     "onView:orbit.debug",
     "onView:orbit.a2a",
+    "onView:orbit.sessions",
     "onCommand:orbit.health.refresh",
     "onCommand:orbit.debug.newSession",
-    "onCommand:orbit.a2a.validate"
+    "onCommand:orbit.a2a.validate",
+    "onCommand:orbit.sessions.refresh"
   ],
   "contributes": {
     "viewsContainers": {
@@ -182,6 +184,12 @@
         "command": "orbit.a2a.openCard",
         "title": "Open Agent Card",
         "category": "Orbit: A2A"
+      },
+      {
+        "command": "orbit.sessions.refresh",
+        "title": "Refresh",
+        "category": "Orbit: Sessions",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -224,6 +232,11 @@
         {
           "command": "orbit.a2a.discover",
           "when": "view == orbit.a2a",
+          "group": "navigation"
+        },
+        {
+          "command": "orbit.sessions.refresh",
+          "when": "view == orbit.sessions",
           "group": "navigation"
         }
       ],
