@@ -83,7 +83,8 @@
         {
           "id": "orbit.mcp.explorer",
           "name": "MCP Explorer",
-          "icon": "$(plug)"
+          "icon": "$(plug)",
+          "contextualTitle": "MCP Connections"
         },
         {
           "id": "orbit.info",

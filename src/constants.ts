@@ -51,4 +51,6 @@ export const VIEW_ITEM_CONTEXT = {
   A2A_AGENT: 'a2aAgent',
 } as const;
 
+export const MCP_EXPLORER_LABEL = 'MCP Connections';
+
 export const OUTPUT_CHANNEL_NAME = 'Orbit';
