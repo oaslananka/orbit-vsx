@@ -212,52 +212,82 @@
         {
           "command": "orbit.health.refresh",
           "when": "view == orbit.health",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Refresh health monitor server list"
+          }
         },
         {
           "command": "orbit.health.addServer",
           "when": "view == orbit.health",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Register a new MCP server"
+          }
         },
         {
           "command": "orbit.debug.newSession",
           "when": "view == orbit.debug",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Create a new debug session"
+          }
         },
         {
           "command": "orbit.debug.search",
           "when": "view == orbit.debug",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Search debug sessions"
+          }
         },
         {
           "command": "orbit.debug.refresh",
           "when": "view == orbit.debug",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Refresh debug session list"
+          }
         },
         {
           "command": "orbit.a2a.refresh",
           "when": "view == orbit.a2a",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Refresh agent registry"
+          }
         },
         {
           "command": "orbit.a2a.validate",
           "when": "view == orbit.a2a",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Validate an agent card file"
+          }
         },
         {
           "command": "orbit.a2a.discover",
           "when": "view == orbit.a2a",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Discover agents from the registry"
+          }
         },
         {
           "command": "orbit.mcp.explorer.refresh",
           "when": "view == orbit.mcp.explorer",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Refresh MCP connection list"
+          }
         },
         {
           "command": "orbit.sessions.refresh",
           "when": "view == orbit.sessions",
-          "group": "navigation"
+          "group": "navigation",
+          "accessibilityInformation": {
+            "label": "Refresh session list"
+          }
         }
       ],
       "view/item/context": [
