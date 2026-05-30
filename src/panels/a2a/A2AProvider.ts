@@ -19,6 +19,9 @@ class A2ARegistryItem extends vscode.TreeItem {
     );
     this.id = `a2a-registry:${registryUrl}`;
     this.iconPath = new vscode.ThemeIcon('cloud');
+    this.tooltip = new vscode.MarkdownString(
+      `**Agent Registry**\n\nURL: \`${registryUrl}\`\nAgents: ${entries.length}`
+    );
     this.contextValue = 'a2aRegistry';
   }
 }
@@ -49,6 +52,7 @@ class A2ALocalCardItem extends vscode.TreeItem {
     this.id = `a2a-local:${filePath}`;
     this.iconPath = new vscode.ThemeIcon('file');
     this.description = 'local card';
+    this.tooltip = new vscode.MarkdownString(`**Local Agent Card**\n\n\`${filePath}\``);
     this.contextValue = 'a2aLocalCard';
   }
 }

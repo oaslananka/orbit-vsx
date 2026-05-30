@@ -18,6 +18,7 @@ class DebugGroupItem extends vscode.TreeItem {
         : vscode.TreeItemCollapsibleState.None
     );
     this.id = `debug-group:${label}`;
+    this.tooltip = new vscode.MarkdownString(`**${label}**\n\nSessions: ${sessions.length}`);
     this.contextValue = 'debugGroup';
   }
 }
