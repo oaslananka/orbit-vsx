@@ -7,6 +7,8 @@ export interface OrbitConfig {
     token: string;
     pollingIntervalSeconds: number;
     enabled: boolean;
+    alertOnDown: boolean;
+    alertOnRecover: boolean;
   };
   debug: {
     endpoint: string;
@@ -43,6 +45,8 @@ export function readConfig(): OrbitConfig {
       token: config.get<string>(CONFIG_KEYS.HEALTH_TOKEN, ''),
       pollingIntervalSeconds: config.get<number>(CONFIG_KEYS.HEALTH_POLLING_INTERVAL, 30),
       enabled: config.get<boolean>(CONFIG_KEYS.HEALTH_ENABLED, true),
+      alertOnDown: config.get<boolean>(CONFIG_KEYS.HEALTH_ALERT_ON_DOWN, true),
+      alertOnRecover: config.get<boolean>(CONFIG_KEYS.HEALTH_ALERT_ON_RECOVER, false),
     },
     debug: {
       endpoint: config.get<string>(CONFIG_KEYS.DEBUG_ENDPOINT, 'http://127.0.0.1:3001'),

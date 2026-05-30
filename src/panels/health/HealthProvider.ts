@@ -49,6 +49,7 @@ export class HealthProvider
   private logger: Logger;
   private _error: string | undefined;
   private _loading = false;
+  private previousStatuses = new Map<string, string>();
 
   constructor(private context: vscode.ExtensionContext) {
     this.logger = new Logger('Orbit:Health');
@@ -84,7 +85,37 @@ export class HealthProvider
     this._loading = true;
     this.refresh();
     try {
-      this.servers = await this.client.listServers();
+      const config = readConfig();
+      const servers = await this.client.listServers();
+
+      if (config.health.alertOnDown || config.health.alertOnRecover) {
+        for (const server of servers) {
+          const prev = this.previousStatuses.get(server.name);
+          if (config.health.alertOnDown && prev === 'up' && server.status === 'down') {
+            void vscode.window
+              .showWarningMessage(
+                `$(error) ${server.name} is DOWN`,
+                'Open Health Monitor',
+                'Dismiss'
+              )
+              .then((selection) => {
+                if (selection === 'Open Health Monitor') {
+                  void vscode.commands.executeCommand('workbench.view.extension.orbit');
+                }
+              });
+          }
+          if (config.health.alertOnRecover && prev === 'down' && server.status === 'up') {
+            void vscode.window.showInformationMessage(`$(check) ${server.name} is back UP`);
+          }
+          this.previousStatuses.set(server.name, server.status);
+        }
+      } else {
+        for (const server of servers) {
+          this.previousStatuses.set(server.name, server.status);
+        }
+      }
+
+      this.servers = servers;
       this._error = undefined;
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);

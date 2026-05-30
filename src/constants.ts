@@ -34,6 +34,8 @@ export const CONFIG_KEYS = {
   HEALTH_TOKEN: 'orbit.health.token',
   HEALTH_POLLING_INTERVAL: 'orbit.health.pollingIntervalSeconds',
   HEALTH_ENABLED: 'orbit.health.enabled',
+  HEALTH_ALERT_ON_DOWN: 'orbit.health.alertOnDown',
+  HEALTH_ALERT_ON_RECOVER: 'orbit.health.alertOnRecover',
   DEBUG_ENDPOINT: 'orbit.debug.endpoint',
   DEBUG_TOKEN: 'orbit.debug.token',
   DEBUG_ENABLED: 'orbit.debug.enabled',

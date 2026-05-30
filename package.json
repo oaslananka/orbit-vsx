@@ -364,6 +364,16 @@
           "default": true,
           "description": "Enable the Health Monitor panel."
         },
+        "orbit.health.alertOnDown": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a notification when an MCP server goes down."
+        },
+        "orbit.health.alertOnRecover": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show a notification when an MCP server recovers."
+        },
         "orbit.debug.endpoint": {
           "type": "string",
           "default": "http://127.0.0.1:3001",
