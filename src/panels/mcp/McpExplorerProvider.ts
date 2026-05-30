@@ -31,14 +31,17 @@ class McpConnectionItem extends vscode.TreeItem {
 }
 
 export class McpExplorerProvider
-  implements vscode.TreeDataProvider<McpConnectionItem>, vscode.Disposable
+  implements vscode.TreeDataProvider<McpConnectionItem | vscode.TreeItem>, vscode.Disposable
 {
-  private _onDidChangeTreeData = new vscode.EventEmitter<McpConnectionItem | undefined>();
+  private _onDidChangeTreeData = new vscode.EventEmitter<
+    McpConnectionItem | vscode.TreeItem | undefined
+  >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private client!: HealthClient;
   private servers: McpServer[] = [];
   private logger: Logger;
+  private _error: string | undefined;
 
   constructor() {
     this.logger = new Logger('Orbit:MCP');
@@ -50,11 +53,12 @@ export class McpExplorerProvider
     this.client = new HealthClient(config.health.endpoint, config.health.token);
   }
 
-  getTreeItem(element: McpConnectionItem): vscode.TreeItem {
+  getTreeItem(element: McpConnectionItem | vscode.TreeItem): vscode.TreeItem {
     return element;
   }
 
-  resolveTreeItem(item: McpConnectionItem): vscode.TreeItem {
+  resolveTreeItem(item: McpConnectionItem | vscode.TreeItem): vscode.TreeItem {
+    if (!(item instanceof McpConnectionItem)) return item;
     const s = item.server;
     const pipelines = s.pipelineGroups ?? [];
     const pipelineInfo =
@@ -76,7 +80,19 @@ export class McpExplorerProvider
     return item;
   }
 
-  getChildren(): McpConnectionItem[] | Promise<McpConnectionItem[]> {
+  getChildren():
+    | (McpConnectionItem | vscode.TreeItem)[]
+    | Promise<(McpConnectionItem | vscode.TreeItem)[]> {
+    if (this._error) {
+      const errItem = new vscode.TreeItem(
+        '⚠ Connection error',
+        vscode.TreeItemCollapsibleState.None
+      );
+      errItem.description = this._error;
+      errItem.tooltip = this._error;
+      errItem.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
+      return [errItem];
+    }
     return this.servers.map((s) => new McpConnectionItem(s));
   }
 
@@ -89,10 +105,10 @@ export class McpExplorerProvider
       } else {
         this.servers = [];
       }
+      this._error = undefined;
     } catch (error) {
-      this.logger.warn(
-        `Failed to list MCP connections: ${error instanceof Error ? error.message : String(error)}`
-      );
+      this._error = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Failed to list MCP connections: ${this._error}`);
       this.servers = [];
     }
     this._onDidChangeTreeData.fire(undefined);

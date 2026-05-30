@@ -55,6 +55,7 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
   private logger: Logger;
   private activeGroup: DebugGroupItem | undefined;
   private recentGroup: DebugGroupItem | undefined;
+  private _error: string | undefined;
 
   constructor(private _context: vscode.ExtensionContext) {
     this.logger = new Logger('Orbit:Debug');
@@ -81,10 +82,10 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
         this.sessions = await this.client.listSessions();
         this.buildGroups();
       }
+      this._error = undefined;
     } catch (error) {
-      this.logger.warn(
-        `Failed to list sessions: ${error instanceof Error ? error.message : String(error)}`
-      );
+      this._error = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Failed to list sessions: ${this._error}`);
     }
     this._onDidChangeTreeData.fire(undefined);
   }
@@ -124,6 +125,16 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
 
   getChildren(element?: vscode.TreeItem): vscode.TreeItem[] {
     if (!element) {
+      if (this._error) {
+        const errItem = new vscode.TreeItem(
+          '⚠ Connection error',
+          vscode.TreeItemCollapsibleState.None
+        );
+        errItem.description = this._error;
+        errItem.tooltip = this._error;
+        errItem.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
+        return [errItem];
+      }
       const items: vscode.TreeItem[] = [];
       if (this.activeGroup) items.push(this.activeGroup);
       if (this.recentGroup) items.push(this.recentGroup);

@@ -35,14 +35,19 @@ class McpServerItem extends vscode.TreeItem {
   }
 }
 
-export class HealthProvider implements vscode.TreeDataProvider<McpServerItem>, vscode.Disposable {
-  private _onDidChangeTreeData = new vscode.EventEmitter<McpServerItem | undefined>();
+export class HealthProvider
+  implements vscode.TreeDataProvider<McpServerItem | vscode.TreeItem>, vscode.Disposable
+{
+  private _onDidChangeTreeData = new vscode.EventEmitter<
+    McpServerItem | vscode.TreeItem | undefined
+  >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   private client!: HealthClient;
   private servers: McpServer[] = [];
   private pollingTimer: ReturnType<typeof setInterval> | undefined;
   private logger: Logger;
+  private _error: string | undefined;
 
   constructor(private context: vscode.ExtensionContext) {
     this.logger = new Logger('Orbit:Health');
@@ -77,11 +82,12 @@ export class HealthProvider implements vscode.TreeDataProvider<McpServerItem>, v
   private async poll(): Promise<void> {
     try {
       this.servers = await this.client.listServers();
+      this._error = undefined;
       this.refresh();
     } catch (error) {
-      this.logger.warn(
-        `Health poll failed: ${error instanceof Error ? error.message : String(error)}`
-      );
+      this._error = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Health poll failed: ${this._error}`);
+      this.refresh();
     }
   }
 
@@ -116,11 +122,12 @@ export class HealthProvider implements vscode.TreeDataProvider<McpServerItem>, v
     this._onDidChangeTreeData.fire(undefined);
   }
 
-  getTreeItem(element: McpServerItem): vscode.TreeItem {
+  getTreeItem(element: McpServerItem | vscode.TreeItem): vscode.TreeItem {
     return element;
   }
 
-  resolveTreeItem(item: McpServerItem): vscode.TreeItem {
+  resolveTreeItem(item: McpServerItem | vscode.TreeItem): vscode.TreeItem {
+    if (!(item instanceof McpServerItem)) return item;
     const s = item.server;
     const pipelines = s.pipelineGroups ?? [];
     const pipelineInfo =
@@ -142,7 +149,17 @@ export class HealthProvider implements vscode.TreeDataProvider<McpServerItem>, v
     return item;
   }
 
-  getChildren(): McpServerItem[] {
+  getChildren(): (McpServerItem | vscode.TreeItem)[] {
+    if (this._error) {
+      const errItem = new vscode.TreeItem(
+        '⚠ Connection error',
+        vscode.TreeItemCollapsibleState.None
+      );
+      errItem.description = this._error;
+      errItem.tooltip = this._error;
+      errItem.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
+      return [errItem];
+    }
     return this.servers.map((s) => new McpServerItem(s));
   }
 
