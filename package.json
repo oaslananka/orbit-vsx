@@ -1,6 +1,7 @@
 {
   "name": "orbit-vsx",
   "displayName": "Orbit",
+  "description": "MCP health monitoring, debug session history, and A2A agent explorer for developers.",
   "version": "0.1.1",
   "publisher": "oaslananka",
   "license": "Apache-2.0",
@@ -31,6 +32,10 @@
     "url": "https://github.com/oaslananka/orbit-vsx/issues"
   },
   "homepage": "https://github.com/oaslananka/orbit-vsx#readme",
+  "galleryBanner": {
+    "color": "#1a1a2e",
+    "theme": "dark"
+  },
   "packageManager": "pnpm@11.3.0",
   "activationEvents": [
     "onView:orbit.health",
