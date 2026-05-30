@@ -57,6 +57,7 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
   private activeGroup: DebugGroupItem | undefined;
   private recentGroup: DebugGroupItem | undefined;
   private _error: string | undefined;
+  private _loading = false;
 
   constructor(private _context: vscode.ExtensionContext) {
     this.logger = new Logger('Orbit:Debug');
@@ -77,6 +78,8 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
   }
 
   async refresh(): Promise<void> {
+    this._loading = true;
+    this._onDidChangeTreeData.fire(undefined);
     try {
       const config = readConfig();
       if (config.debug.enabled) {
@@ -88,6 +91,7 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
       this._error = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Failed to list sessions: ${this._error}`);
     }
+    this._loading = false;
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -126,6 +130,11 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
 
   getChildren(element?: vscode.TreeItem): vscode.TreeItem[] {
     if (!element) {
+      if (this._loading) {
+        const loadingItem = new vscode.TreeItem('Loading…', vscode.TreeItemCollapsibleState.None);
+        loadingItem.iconPath = new vscode.ThemeIcon('loading~spin');
+        return [loadingItem];
+      }
       if (this._error) {
         const errItem = new vscode.TreeItem(
           '⚠ Connection error',

@@ -68,6 +68,7 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
   private diagnosticCollection: vscode.DiagnosticCollection;
   private logger: Logger;
   private _error: string | undefined;
+  private _loading = false;
 
   constructor(private _context: vscode.ExtensionContext) {
     this.logger = new Logger('Orbit:A2A');
@@ -100,6 +101,8 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
   }
 
   async refresh(): Promise<void> {
+    this._loading = true;
+    this._onDidChangeTreeData.fire(undefined);
     try {
       const config = readConfig();
       if (config.a2a.enabled) {
@@ -125,6 +128,7 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
       this._error = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Failed to list agents: ${this._error}`);
     }
+    this._loading = false;
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -151,6 +155,11 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
 
   getChildren(element?: vscode.TreeItem): vscode.TreeItem[] {
     if (!element) {
+      if (this._loading) {
+        const loadingItem = new vscode.TreeItem('Loading…', vscode.TreeItemCollapsibleState.None);
+        loadingItem.iconPath = new vscode.ThemeIcon('loading~spin');
+        return [loadingItem];
+      }
       if (this._error) {
         const errItem = new vscode.TreeItem(
           '⚠ Connection error',

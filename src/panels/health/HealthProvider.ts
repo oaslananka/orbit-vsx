@@ -48,6 +48,7 @@ export class HealthProvider
   private pollingTimer: ReturnType<typeof setInterval> | undefined;
   private logger: Logger;
   private _error: string | undefined;
+  private _loading = false;
 
   constructor(private context: vscode.ExtensionContext) {
     this.logger = new Logger('Orbit:Health');
@@ -80,15 +81,17 @@ export class HealthProvider
   }
 
   private async poll(): Promise<void> {
+    this._loading = true;
+    this.refresh();
     try {
       this.servers = await this.client.listServers();
       this._error = undefined;
-      this.refresh();
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Health poll failed: ${this._error}`);
-      this.refresh();
     }
+    this._loading = false;
+    this.refresh();
   }
 
   getClient(): HealthClient {
@@ -150,6 +153,11 @@ export class HealthProvider
   }
 
   getChildren(): (McpServerItem | vscode.TreeItem)[] {
+    if (this._loading) {
+      const loadingItem = new vscode.TreeItem('Loading…', vscode.TreeItemCollapsibleState.None);
+      loadingItem.iconPath = new vscode.ThemeIcon('loading~spin');
+      return [loadingItem];
+    }
     if (this._error) {
       const errItem = new vscode.TreeItem(
         '⚠ Connection error',

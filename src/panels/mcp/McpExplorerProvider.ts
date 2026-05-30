@@ -42,6 +42,7 @@ export class McpExplorerProvider
   private servers: McpServer[] = [];
   private logger: Logger;
   private _error: string | undefined;
+  private _loading = false;
 
   constructor() {
     this.logger = new Logger('Orbit:MCP');
@@ -83,6 +84,11 @@ export class McpExplorerProvider
   getChildren():
     | (McpConnectionItem | vscode.TreeItem)[]
     | Promise<(McpConnectionItem | vscode.TreeItem)[]> {
+    if (this._loading) {
+      const loadingItem = new vscode.TreeItem('Loading…', vscode.TreeItemCollapsibleState.None);
+      loadingItem.iconPath = new vscode.ThemeIcon('loading~spin');
+      return [loadingItem];
+    }
     if (this._error) {
       const errItem = new vscode.TreeItem(
         '⚠ Connection error',
@@ -102,6 +108,8 @@ export class McpExplorerProvider
   }
 
   async refresh(): Promise<void> {
+    this._loading = true;
+    this._onDidChangeTreeData.fire(undefined);
     try {
       const config = readConfig();
       if (config.health.enabled) {
@@ -116,6 +124,7 @@ export class McpExplorerProvider
       this.logger.warn(`Failed to list MCP connections: ${this._error}`);
       this.servers = [];
     }
+    this._loading = false;
     this._onDidChangeTreeData.fire(undefined);
   }
 
