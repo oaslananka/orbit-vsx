@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import { A2AProvider } from '../../src/panels/a2a/A2AProvider';
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 suite('A2A Explorer Panel', () => {
   test('A2AClient should construct with registry URL', () => {

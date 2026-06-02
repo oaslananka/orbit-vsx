@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import { DebugProvider } from '../../src/panels/debug/DebugProvider';
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 suite('Debug Recorder Panel', () => {
   test('DebugClient should construct with endpoint', () => {

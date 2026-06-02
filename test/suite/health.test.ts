@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import { HealthProvider } from '../../src/panels/health/HealthProvider';
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 suite('Health Monitor Panel', () => {
   test('HealthClient should construct with endpoint', () => {

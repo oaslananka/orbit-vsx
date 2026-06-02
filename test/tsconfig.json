@@ -13,6 +13,6 @@
     "skipLibCheck": true,
     "types": ["node", "mocha"]
   },
-  "include": ["suite/**/*.ts"],
+  "include": ["runTests.ts", "suite/**/*.ts"],
   "exclude": ["node_modules", "../dist"]
 }
