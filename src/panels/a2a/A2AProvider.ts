@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../../config';
-import { VIEW_ITEM_CONTEXT } from '../../constants';
+import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants';
 import { A2AClient } from './A2AClient';
 import type { AgentCard, AgentRegistryEntry } from './types';
 import { Logger } from '../../utils/logger';
 import { createA2ADetailWebview } from './A2AWebviewPanel';
+import { createTreeEmptyState } from '../../utils/treeEmptyState';
 
 class A2ARegistryItem extends vscode.TreeItem {
   constructor(
@@ -181,9 +182,14 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
         items.push(localItem);
       }
       if (items.length === 0) {
-        const emptyItem = new vscode.TreeItem('No agents found');
-        emptyItem.description = 'Add an agent or discover one to begin';
-        return [emptyItem];
+        return createTreeEmptyState({
+          icon: 'graph',
+          title: 'No agents found',
+          description: 'Discover agents from a URL or scaffold a new one.',
+          actionLabel: 'Discover Agent',
+          actionCommand: COMMAND_IDS.A2A_DISCOVER,
+          actionIcon: 'search',
+        });
       }
       return items;
     }

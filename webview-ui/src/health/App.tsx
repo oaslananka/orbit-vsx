@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import { EmptyState } from '../components/EmptyState';
 
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
@@ -57,7 +58,15 @@ function App(): React.ReactElement {
   if (!payload || payload.servers.length === 0) {
     return (
       <div style={styles.container}>
-        <p style={styles.emptyState}>No servers registered. Add a server to begin monitoring.</p>
+        <EmptyState
+          icon="pulse"
+          title="No servers connected"
+          description="Add a health-monitor-mcp endpoint to start monitoring."
+          actionLabel="Add Server"
+          onAction={() =>
+            vscode?.postMessage({ type: 'command', command: 'orbit.health.addServer' })
+          }
+        />
       </div>
     );
   }
@@ -157,7 +166,6 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
   },
   lastCheck: { opacity: 0.5 },
-  emptyState: { opacity: 0.6, textAlign: 'center' as const, marginTop: '24px' },
 };
 
 document.addEventListener('DOMContentLoaded', () => {

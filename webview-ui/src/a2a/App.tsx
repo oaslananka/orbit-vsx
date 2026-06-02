@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import { EmptyState } from '../components/EmptyState';
 
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
@@ -62,9 +63,13 @@ function App(): React.ReactElement {
   if (!payload || (payload.agents.length === 0 && payload.localCards.length === 0)) {
     return (
       <div style={styles.container}>
-        <p style={styles.emptyState}>
-          No agents found. Use "Discover" to find agents or scaffold a new one.
-        </p>
+        <EmptyState
+          icon="graph"
+          title="No agents found"
+          description="Discover agents from a URL or scaffold a new one."
+          actionLabel="Discover Agent"
+          onAction={() => vscode?.postMessage({ type: 'command', command: 'orbit.a2a.discover' })}
+        />
       </div>
     );
   }
@@ -154,7 +159,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
   version: { opacity: 0.5, fontSize: '0.85em' },
   description: { margin: 0, fontSize: '0.85em', opacity: 0.7 },
-  emptyState: { opacity: 0.6, textAlign: 'center' as const, marginTop: '24px' },
 };
 
 document.addEventListener('DOMContentLoaded', () => {

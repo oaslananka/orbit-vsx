@@ -1,6 +1,13 @@
 import * as vscode from 'vscode';
+import { COMMAND_IDS } from '../../constants';
 import { getNonce, getWebviewUri } from '../../utils/webview';
+import { executeAllowedWebviewCommand, getWebviewClipboardText } from '../../utils/webviewMessages';
 import type { McpServer } from './types';
+
+const HEALTH_WEBVIEW_COMMANDS = new Set<string>([
+  COMMAND_IDS.HEALTH_ADD_SERVER,
+  COMMAND_IDS.HEALTH_OPEN_DETAIL,
+]);
 
 export function createHealthDetailWebview(
   context: vscode.ExtensionContext,
@@ -26,12 +33,14 @@ export function createHealthDetailWebview(
 
   panel.webview.html = renderHealthDetailHtml(server, scriptUri, nonce);
 
-  panel.webview.onDidReceiveMessage((message) => {
-    if (message.type === 'command') {
-      vscode.commands.executeCommand(message.command as string, message.data as unknown);
+  panel.webview.onDidReceiveMessage((message: unknown) => {
+    if (executeAllowedWebviewCommand(message, HEALTH_WEBVIEW_COMMANDS)) {
+      return;
     }
-    if (message.type === 'copyToClipboard') {
-      void vscode.env.clipboard.writeText(message.text as string).then(() => {
+
+    const clipboardText = getWebviewClipboardText(message);
+    if (clipboardText !== undefined) {
+      void vscode.env.clipboard.writeText(clipboardText).then(() => {
         void vscode.window.showInformationMessage('Copied to clipboard.');
       });
     }

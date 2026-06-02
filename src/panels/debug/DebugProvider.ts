@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../../config';
-import { VIEW_ITEM_CONTEXT } from '../../constants';
+import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants';
 import { DebugClient } from './DebugClient';
 import type { DebugSession } from './types';
 import { Logger } from '../../utils/logger';
 import { createDebugDetailWebview } from './DebugWebviewPanel';
+import { createTreeEmptyState } from '../../utils/treeEmptyState';
 
 class DebugGroupItem extends vscode.TreeItem {
   constructor(
@@ -149,9 +150,13 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
       if (this.activeGroup) items.push(this.activeGroup);
       if (this.recentGroup) items.push(this.recentGroup);
       if (items.length === 0) {
-        const emptyItem = new vscode.TreeItem('No debug sessions');
-        emptyItem.description = 'Start a new session to begin tracking';
-        return [emptyItem];
+        return createTreeEmptyState({
+          icon: 'bug',
+          title: 'No debug sessions',
+          description: 'Start a session to track errors and fix attempts.',
+          actionLabel: 'New Session',
+          actionCommand: COMMAND_IDS.DEBUG_NEW_SESSION,
+        });
       }
       return items;
     }

@@ -1,7 +1,15 @@
 import * as vscode from 'vscode';
+import { COMMAND_IDS } from '../../constants';
 import { getNonce, getWebviewUri } from '../../utils/webview';
+import {
+  executeAllowedWebviewCommand,
+  getWebviewClipboardText,
+  getWebviewMessageRecord,
+} from '../../utils/webviewMessages';
 import type { DebugClient } from './DebugClient';
 import type { DebugSession } from './types';
+
+const DEBUG_WEBVIEW_COMMANDS = new Set<string>([COMMAND_IDS.DEBUG_NEW_SESSION]);
 
 export function createDebugDetailWebview(
   context: vscode.ExtensionContext,
@@ -29,8 +37,17 @@ export function createDebugDetailWebview(
   // Render shell immediately, load data async
   panel.webview.html = renderDebugShellHtml(scriptUri, nonce);
 
-  panel.webview.onDidReceiveMessage((message) => {
-    if (message.type === 'ready') {
+  panel.webview.onDidReceiveMessage((message: unknown) => {
+    if (executeAllowedWebviewCommand(message, DEBUG_WEBVIEW_COMMANDS)) {
+      return;
+    }
+
+    const record = getWebviewMessageRecord(message);
+    if (!record) {
+      return;
+    }
+
+    if (record.type === 'ready') {
       // Webview is ready — fetch and push session data
       void client
         .getSessionContext(sessionId)
@@ -44,15 +61,24 @@ export function createDebugDetailWebview(
           });
         });
     }
-    if (message.type === 'addFix') {
-      void client.addFix(sessionId, message.description as string).then(() => {
-        void client.getSessionContext(sessionId).then((session: DebugSession) => {
+    if (record.type === 'addFix' && typeof record.description === 'string') {
+      void client
+        .addFix(sessionId, record.description)
+        .then(() => client.getSessionContext(sessionId))
+        .then((session: DebugSession) => {
           void panel.webview.postMessage({ type: 'update', payload: session });
+        })
+        .catch((error) => {
+          const messageText = error instanceof Error ? error.message : String(error);
+          void panel.webview.postMessage({
+            type: 'error',
+            payload: { message: `Could not add fix: ${messageText}` },
+          });
         });
-      });
     }
-    if (message.type === 'copyToClipboard') {
-      void vscode.env.clipboard.writeText(message.text as string);
+    const clipboardText = getWebviewClipboardText(record);
+    if (clipboardText !== undefined) {
+      void vscode.env.clipboard.writeText(clipboardText);
     }
   });
 }

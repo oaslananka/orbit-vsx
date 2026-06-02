@@ -1,6 +1,14 @@
 import * as vscode from 'vscode';
+import { COMMAND_IDS } from '../../constants';
 import { getNonce, getWebviewUri } from '../../utils/webview';
+import { executeAllowedWebviewCommand, getWebviewClipboardText } from '../../utils/webviewMessages';
 import type { AgentCard } from './types';
+
+const A2A_WEBVIEW_COMMANDS = new Set<string>([
+  COMMAND_IDS.A2A_DISCOVER,
+  COMMAND_IDS.A2A_OPEN_CARD,
+  COMMAND_IDS.A2A_SCAFFOLD,
+]);
 
 export function createA2ADetailWebview(context: vscode.ExtensionContext, card: AgentCard): void {
   const panel = vscode.window.createWebviewPanel(
@@ -23,9 +31,14 @@ export function createA2ADetailWebview(context: vscode.ExtensionContext, card: A
 
   panel.webview.html = renderA2AShellHtml(card, scriptUri, nonce);
 
-  panel.webview.onDidReceiveMessage((message) => {
-    if (message.type === 'copyToClipboard') {
-      void vscode.env.clipboard.writeText(message.text as string).then(() => {
+  panel.webview.onDidReceiveMessage((message: unknown) => {
+    if (executeAllowedWebviewCommand(message, A2A_WEBVIEW_COMMANDS)) {
+      return;
+    }
+
+    const clipboardText = getWebviewClipboardText(message);
+    if (clipboardText !== undefined) {
+      void vscode.env.clipboard.writeText(clipboardText).then(() => {
         void vscode.window.showInformationMessage('Agent card JSON copied to clipboard.');
       });
     }

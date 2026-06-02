@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
+import { EmptyState } from '../components/EmptyState';
 
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
@@ -106,7 +107,15 @@ function App(): React.ReactElement {
   if (!session) {
     return (
       <div style={styles.container}>
-        <p style={{ opacity: 0.6 }}>No session data.</p>
+        <EmptyState
+          icon="bug"
+          title="No debug sessions"
+          description="Start a session to track errors and fix attempts."
+          actionLabel="New Session"
+          onAction={() =>
+            vscode?.postMessage({ type: 'command', command: 'orbit.debug.newSession' })
+          }
+        />
       </div>
     );
   }

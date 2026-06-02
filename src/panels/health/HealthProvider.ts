@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../../config';
-import { ORBIT_VIEW_CONTAINER_COMMAND, VIEW_ITEM_CONTEXT } from '../../constants';
+import { COMMAND_IDS, ORBIT_VIEW_CONTAINER_COMMAND, VIEW_ITEM_CONTEXT } from '../../constants';
 import { HealthClient } from './HealthClient';
 import type { McpServer, DashboardData } from './types';
 import { Logger } from '../../utils/logger';
 import { createHealthDetailWebview } from './HealthWebviewPanel';
+import { createTreeEmptyState } from '../../utils/treeEmptyState';
 
 class McpServerItem extends vscode.TreeItem {
   constructor(public readonly server: McpServer) {
@@ -200,9 +201,13 @@ export class HealthProvider
       return [errItem];
     }
     if (this.servers.length === 0) {
-      const emptyItem = new vscode.TreeItem('No servers registered');
-      emptyItem.description = 'Add a server to begin monitoring';
-      return [emptyItem];
+      return createTreeEmptyState({
+        icon: 'pulse',
+        title: 'No servers connected',
+        description: 'Add a health-monitor-mcp endpoint to start monitoring.',
+        actionLabel: 'Add Server',
+        actionCommand: COMMAND_IDS.HEALTH_ADD_SERVER,
+      });
     }
     return this.servers.map((s) => new McpServerItem(s));
   }

@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
-import { VIEW_ITEM_CONTEXT } from '../../constants';
+import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants';
 import { HealthClient } from '../health/HealthClient';
 import type { McpServer } from '../health/types';
 import { readConfig } from '../../config';
 import { Logger } from '../../utils/logger';
+import { createTreeEmptyState } from '../../utils/treeEmptyState';
 
 class McpConnectionItem extends vscode.TreeItem {
   constructor(public readonly server: McpServer) {
@@ -100,9 +101,13 @@ export class McpExplorerProvider
       return [errItem];
     }
     if (this.servers.length === 0) {
-      const emptyItem = new vscode.TreeItem('No MCP connections');
-      emptyItem.description = 'Check health monitor endpoint configuration';
-      return [emptyItem];
+      return createTreeEmptyState({
+        icon: 'plug',
+        title: 'No MCP connections',
+        description: 'Register a health-monitor-mcp server to inspect MCP connections.',
+        actionLabel: 'Add Server',
+        actionCommand: COMMAND_IDS.HEALTH_ADD_SERVER,
+      });
     }
     return this.servers.map((s) => new McpConnectionItem(s));
   }
