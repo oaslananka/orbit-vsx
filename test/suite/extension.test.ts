@@ -2,6 +2,7 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { refreshStartupProviders } from '../../src/extension';
 
 interface ExtensionManifest {
   name: string;
@@ -12,6 +13,10 @@ function getExpectedExtensionId(): string {
   const manifestPath = path.resolve(__dirname, '..', '..', 'package.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as ExtensionManifest;
   return `${manifest.publisher}.${manifest.name}`;
+}
+
+function flushPromises(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
 suite('Orbit Extension', () => {
@@ -70,5 +75,47 @@ suite('Orbit Extension', () => {
 
     const a2aView = vscode.window.createTreeView('orbit.a2a', { treeDataProvider: {} as never });
     assert.ok(a2aView, 'orbit.a2a view should be creatable');
+  });
+
+  test('Should refresh startup providers during activation wiring', () => {
+    let debugRefreshes = 0;
+    let a2aRefreshes = 0;
+    const logger = { warn: (): void => undefined };
+
+    refreshStartupProviders(
+      logger,
+      {
+        refresh: async () => {
+          debugRefreshes += 1;
+        },
+      },
+      {
+        refresh: async () => {
+          a2aRefreshes += 1;
+        },
+      }
+    );
+
+    assert.strictEqual(debugRefreshes, 1);
+    assert.strictEqual(a2aRefreshes, 1);
+  });
+
+  test('Should log startup provider refresh failures', async () => {
+    const warnings: string[] = [];
+    const logger = {
+      warn: (message: string): void => {
+        warnings.push(message);
+      },
+    };
+
+    refreshStartupProviders(logger, {
+      refresh: async () => {
+        throw new Error('startup refresh failed');
+      },
+    });
+    await flushPromises();
+
+    assert.strictEqual(warnings.length, 1);
+    assert.match(warnings[0], /startup refresh failed/);
   });
 });
