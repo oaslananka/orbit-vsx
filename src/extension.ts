@@ -13,6 +13,27 @@ import { DebugDecorationProvider } from './decorations/DebugDecorationProvider';
 import { Logger } from './utils/logger';
 import { readConfig } from './config';
 
+interface StartupRefreshProvider {
+  refresh(): Promise<void> | void;
+}
+
+/**
+ * Starts the initial tree provider refreshes after views and listeners are registered.
+ */
+export function refreshStartupProviders(
+  logger: Pick<Logger, 'warn'>,
+  ...providers: StartupRefreshProvider[]
+): void {
+  providers.forEach((provider) => {
+    Promise.resolve()
+      .then(() => provider.refresh())
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.warn(`Startup provider refresh failed: ${message}`);
+      });
+  });
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const logger = new Logger('Orbit');
   logger.info('Orbit activated');
@@ -52,8 +73,9 @@ export function activate(context: vscode.ExtensionContext): void {
   const guard = <T>(fn: () => T): void => {
     try {
       fn();
-    } catch {
-      /* noop */
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(`Failed to update view descriptions: ${message}`);
     }
   };
   healthProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
@@ -62,6 +84,8 @@ export function activate(context: vscode.ExtensionContext): void {
   mcpProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
 
   context.subscriptions.push(healthTree, debugTree, a2aTree, mcpTree);
+
+  refreshStartupProviders(logger, debugProvider, a2aProvider);
 
   registerHealthCommands(context, healthProvider);
   registerDebugCommands(context, debugProvider);
