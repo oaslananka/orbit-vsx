@@ -9,6 +9,8 @@ interface ExtensionManifest {
   publisher: string;
 }
 
+const NEXT_EVENT_LOOP_TICK_MS = 0;
+
 function getExpectedExtensionId(): string {
   const manifestPath = path.resolve(__dirname, '..', '..', 'package.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as ExtensionManifest;
@@ -16,7 +18,7 @@ function getExpectedExtensionId(): string {
 }
 
 function flushPromises(): Promise<void> {
-  return new Promise((resolve) => setImmediate(resolve));
+  return new Promise((resolve) => setTimeout(resolve, NEXT_EVENT_LOOP_TICK_MS));
 }
 
 suite('Orbit Extension', () => {
@@ -77,7 +79,7 @@ suite('Orbit Extension', () => {
     assert.ok(a2aView, 'orbit.a2a view should be creatable');
   });
 
-  test('Should refresh startup providers during activation wiring', () => {
+  test('Should refresh startup providers during activation wiring', async () => {
     let debugRefreshes = 0;
     let a2aRefreshes = 0;
     const logger = { warn: (): void => undefined };
@@ -95,6 +97,7 @@ suite('Orbit Extension', () => {
         },
       }
     );
+    await flushPromises();
 
     assert.strictEqual(debugRefreshes, 1);
     assert.strictEqual(a2aRefreshes, 1);
@@ -109,13 +112,19 @@ suite('Orbit Extension', () => {
     };
 
     refreshStartupProviders(logger, {
+      refresh: () => {
+        throw new Error('sync startup refresh failed');
+      },
+    });
+    refreshStartupProviders(logger, {
       refresh: async () => {
-        throw new Error('startup refresh failed');
+        throw new Error('async startup refresh failed');
       },
     });
     await flushPromises();
 
-    assert.strictEqual(warnings.length, 1);
-    assert.match(warnings[0], /startup refresh failed/);
+    assert.strictEqual(warnings.length, 2);
+    assert.match(warnings[0], /sync startup refresh failed/);
+    assert.match(warnings[1], /async startup refresh failed/);
   });
 });

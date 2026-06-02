@@ -14,7 +14,7 @@ import { Logger } from './utils/logger';
 import { readConfig } from './config';
 
 interface StartupRefreshProvider {
-  refresh(): Promise<void>;
+  refresh(): Promise<void> | void;
 }
 
 /**
@@ -25,10 +25,12 @@ export function refreshStartupProviders(
   ...providers: StartupRefreshProvider[]
 ): void {
   providers.forEach((provider) => {
-    provider.refresh().catch((error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      logger.warn(`Startup provider refresh failed: ${message}`);
-    });
+    Promise.resolve()
+      .then(() => provider.refresh())
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.warn(`Startup provider refresh failed: ${message}`);
+      });
   });
 }
 
