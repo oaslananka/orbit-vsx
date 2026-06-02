@@ -1,8 +1,8 @@
 {
   "name": "orbit-vsx",
-  "displayName": "Orbit",
+  "displayName": "Orbit MCP & A2A",
   "description": "MCP health monitoring, debug session history, and A2A agent explorer for developers.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "publisher": "oaslananka",
   "license": "Apache-2.0",
   "engines": {

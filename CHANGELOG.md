@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.1] - 2026-06-02
+
+### Fixed
+
+- Renamed the Marketplace display name to avoid the Visual Studio Marketplace display-name collision encountered during the first public release attempt.
+
 ## [0.5.0] - 2026-05-30
 
 ### Added
