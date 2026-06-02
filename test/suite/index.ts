@@ -14,6 +14,7 @@ export function run(): Promise<void> {
   mocha.addFile(path.resolve(testsRoot, 'health.test.js'));
   mocha.addFile(path.resolve(testsRoot, 'debug.test.js'));
   mocha.addFile(path.resolve(testsRoot, 'a2a.test.js'));
+  mocha.addFile(path.resolve(testsRoot, 'webview.test.js'));
 
   return new Promise((resolve, reject) => {
     try {
