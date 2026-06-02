@@ -1,14 +1,28 @@
 import * as assert from 'node:assert';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
+
+interface ExtensionManifest {
+  name: string;
+  publisher: string;
+}
+
+function getExpectedExtensionId(): string {
+  const manifestPath = path.resolve(__dirname, '..', '..', 'package.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as ExtensionManifest;
+  return `${manifest.publisher}.${manifest.name}`;
+}
 
 suite('Orbit Extension', () => {
   test('Extension should be present', () => {
-    const ext = vscode.extensions.getExtension('oaslananka.orbit');
-    assert.ok(ext, 'Extension oaslananka.orbit should be available');
+    const extensionId = getExpectedExtensionId();
+    const ext = vscode.extensions.getExtension(extensionId);
+    assert.ok(ext, `Extension ${extensionId} should be available`);
   });
 
   test('Should activate', async () => {
-    const ext = vscode.extensions.getExtension('oaslananka.orbit');
+    const ext = vscode.extensions.getExtension(getExpectedExtensionId());
     if (!ext) {
       assert.fail('Extension not found');
       return;
