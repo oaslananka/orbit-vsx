@@ -17,6 +17,8 @@ eslint.config.mjs
 pnpm-lock.yaml
 pnpm-workspace.yaml
 .codex-checkpoints/
+.c8rc.json
+coverage/
 .gitignore
 renovate.json
 *.vsix
