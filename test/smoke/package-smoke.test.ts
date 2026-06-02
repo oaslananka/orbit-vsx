@@ -100,8 +100,12 @@ suite('Packaged Orbit VSIX', () => {
     EXPECTED_README_SECTIONS.forEach((section) => {
       assert.ok(readme.includes(section), `Packaged README should include ${section}`);
     });
+    const normalizedReadme = readme.toLowerCase();
     FORBIDDEN_README_CONTENT.forEach((content) => {
-      assert.ok(!readme.includes(content), `Packaged README should not include ${content}`);
+      assert.ok(
+        !normalizedReadme.includes(content.toLowerCase()),
+        `Packaged README should not include ${content}`
+      );
     });
     assert.ok(
       !fs.existsSync(path.join(extension.extensionPath, 'RELEASING.md')),
