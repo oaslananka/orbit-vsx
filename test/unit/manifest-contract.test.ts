@@ -21,7 +21,7 @@ interface ManifestView {
 }
 
 interface ManifestViewContainer {
-  icon: string;
+  icon?: string;
   id: string;
 }
 
@@ -53,7 +53,7 @@ interface Manifest {
     color: string;
     theme: string;
   };
-  icon: string;
+  icon?: string;
   keywords: string[];
 }
 
@@ -146,16 +146,23 @@ suite('Manifest Contracts', () => {
 
   test('Should keep Marketplace and activity-bar icons valid', () => {
     const manifest = readManifest();
-    const icon = readPngInfo(manifest.icon);
+    const marketplaceIcon = manifest.icon;
+    if (typeof marketplaceIcon !== 'string') {
+      assert.fail('Marketplace icon should be declared');
+    }
+    const icon = readPngInfo(marketplaceIcon);
     const activityBarIcon = manifest.contributes.viewsContainers.activitybar[0]?.icon;
 
     assert.deepStrictEqual(icon, { width: 128, height: 128, bitDepth: 8, colorType: 6 });
-    assert.ok(activityBarIcon, 'Activity-bar icon should be declared');
-    [activityBarIcon, 'media/orbit-dark.svg'].forEach((asset) => {
+    if (typeof activityBarIcon !== 'string') {
+      assert.fail('Activity-bar icon should be declared');
+    }
+    for (const asset of [activityBarIcon, 'media/orbit-dark.svg']) {
+      if (typeof asset !== 'string' || asset.length === 0) continue;
       const svg = fs.readFileSync(path.join(REPO_ROOT, asset), 'utf8');
       assert.ok(svg.includes('currentColor'), `${asset} should inherit VS Code theme color`);
       assert.ok(!svg.includes('#'), `${asset} should avoid hard-coded colors`);
-    });
+    }
   });
 
   test('Should keep contributed commands in sync with command constants', () => {

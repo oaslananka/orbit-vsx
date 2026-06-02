@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 interface ActivityBarContainer {
-  icon: string;
+  icon?: string;
   id: string;
 }
 
@@ -13,7 +13,7 @@ interface ManifestView {
 }
 
 interface ExtensionManifest {
-  icon: string;
+  icon?: string;
   contributes: {
     viewsContainers: {
       activitybar: ActivityBarContainer[];
@@ -115,7 +115,7 @@ suite('Packaged Orbit VSIX', () => {
       'Packaged extension should exclude maintainer-only release instructions'
     );
     [manifest.icon, ...manifest.contributes.viewsContainers.activitybar.map(({ icon }) => icon)]
-      .filter((asset) => asset.length > 0)
+      .filter((asset): asset is string => typeof asset === 'string' && asset.length > 0)
       .forEach((asset) => {
         assert.ok(
           fs.existsSync(path.join(extension.extensionPath, asset)),
