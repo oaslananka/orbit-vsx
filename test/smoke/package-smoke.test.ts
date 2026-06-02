@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 interface ActivityBarContainer {
+  icon: string;
   id: string;
 }
 
@@ -12,6 +13,7 @@ interface ManifestView {
 }
 
 interface ExtensionManifest {
+  icon: string;
   contributes: {
     viewsContainers: {
       activitybar: ActivityBarContainer[];
@@ -95,6 +97,7 @@ suite('Packaged Orbit VSIX', () => {
 
   test('Should expose expected Marketplace README sections from the installed VSIX', async () => {
     const extension = getOrbitExtension();
+    const manifest = getManifest();
     const readme = readInstalledReadme(extension.extensionPath);
 
     EXPECTED_README_SECTIONS.forEach((section) => {
@@ -111,6 +114,14 @@ suite('Packaged Orbit VSIX', () => {
       !fs.existsSync(path.join(extension.extensionPath, 'RELEASING.md')),
       'Packaged extension should exclude maintainer-only release instructions'
     );
+    [manifest.icon, ...manifest.contributes.viewsContainers.activitybar.map(({ icon }) => icon)]
+      .filter((asset) => asset.length > 0)
+      .forEach((asset) => {
+        assert.ok(
+          fs.existsSync(path.join(extension.extensionPath, asset)),
+          `Packaged extension should include ${asset}`
+        );
+      });
     await vscode.commands.executeCommand(SHOW_EXTENSION_DETAILS_COMMAND, [EXTENSION_ID]);
   });
 });

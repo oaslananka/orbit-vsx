@@ -20,12 +20,18 @@ interface ManifestView {
   id: string;
 }
 
+interface ManifestViewContainer {
+  icon: string;
+  id: string;
+}
+
 interface ManifestWelcomeItem {
   contents?: string;
 }
 
 interface Manifest {
   activationEvents: string[];
+  categories: string[];
   contributes: {
     commands: ManifestCommand[];
     configuration: {
@@ -35,8 +41,27 @@ interface Manifest {
     views: {
       orbit: ManifestView[];
     };
+    viewsContainers: {
+      activitybar: ManifestViewContainer[];
+    };
     viewsWelcome?: ManifestWelcomeItem[];
   };
+  description: string;
+  displayName: string;
+  extensionKind?: string[];
+  galleryBanner?: {
+    color: string;
+    theme: string;
+  };
+  icon: string;
+  keywords: string[];
+}
+
+interface PngInfo {
+  bitDepth: number;
+  colorType: number;
+  height: number;
+  width: number;
 }
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -44,6 +69,7 @@ const MANIFEST_PATH = path.join(REPO_ROOT, 'package.json');
 const COMMAND_URI_PATTERN = /command:([A-Za-z0-9_.-]+)/g;
 const TEXT_FILE_EXTENSIONS = new Set(['.json', '.md', '.ts', '.tsx']);
 const INVALID_ORBIT_VIEW_COMMAND_PATTERN = /workbench\.view\.extension\.orbit\.[A-Za-z0-9_.-]+/g;
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const SOURCE_SCAN_TARGETS = ['package.json', 'README.md', 'src', 'webview-ui/src', 'test'];
 
 function readManifest(): Manifest {
@@ -82,7 +108,56 @@ function commandUriReferences(text: string): string[] {
   return Array.from(text.matchAll(COMMAND_URI_PATTERN), (match) => match[1] ?? '');
 }
 
+function readPngInfo(relativePath: string): PngInfo {
+  const buffer = fs.readFileSync(path.join(REPO_ROOT, relativePath));
+  assert.ok(buffer.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE), 'PNG signature');
+  assert.strictEqual(buffer.toString('ascii', 12, 16), 'IHDR', 'PNG IHDR chunk');
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    bitDepth: buffer.readUInt8(24),
+    colorType: buffer.readUInt8(25),
+  };
+}
+
 suite('Manifest Contracts', () => {
+  test('Should expose polished Marketplace metadata', () => {
+    const manifest = readManifest();
+    const metadataText = [
+      manifest.displayName,
+      manifest.description,
+      ...manifest.categories,
+      ...manifest.keywords,
+    ].join(' ');
+
+    assert.strictEqual(manifest.displayName, 'Orbit MCP & A2A');
+    assert.strictEqual(
+      manifest.description,
+      'Monitor MCP servers, record debug sessions, and explore A2A agents from VS Code.'
+    );
+    assert.deepStrictEqual(manifest.categories, ['Debuggers', 'Other', 'Visualization']);
+    assert.deepStrictEqual(manifest.extensionKind, ['workspace']);
+    assert.deepStrictEqual(manifest.galleryBanner, { color: '#102033', theme: 'dark' });
+    ['mcp-server', 'agent-card', 'debug-recorder', 'health-monitor'].forEach((keyword) => {
+      assert.ok(manifest.keywords.includes(keyword), `keywords should include ${keyword}`);
+    });
+    assert.ok(!/scaffold|experiment|packaging/i.test(metadataText));
+  });
+
+  test('Should keep Marketplace and activity-bar icons valid', () => {
+    const manifest = readManifest();
+    const icon = readPngInfo(manifest.icon);
+    const activityBarIcon = manifest.contributes.viewsContainers.activitybar[0]?.icon;
+
+    assert.deepStrictEqual(icon, { width: 128, height: 128, bitDepth: 8, colorType: 6 });
+    assert.ok(activityBarIcon, 'Activity-bar icon should be declared');
+    [activityBarIcon, 'media/orbit-dark.svg'].forEach((asset) => {
+      const svg = fs.readFileSync(path.join(REPO_ROOT, asset), 'utf8');
+      assert.ok(svg.includes('currentColor'), `${asset} should inherit VS Code theme color`);
+      assert.ok(!svg.includes('#'), `${asset} should avoid hard-coded colors`);
+    });
+  });
+
   test('Should keep contributed commands in sync with command constants', () => {
     const manifest = readManifest();
     const contributedCommands = manifest.contributes.commands.map(({ command }) => command).sort();
