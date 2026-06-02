@@ -6,7 +6,7 @@
   "publisher": "oaslananka",
   "license": "Apache-2.0",
   "engines": {
-    "vscode": "^1.100.0",
+    "vscode": "^1.122.1",
     "node": ">=22.0.0"
   },
   "categories": [
