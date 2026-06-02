@@ -2,6 +2,7 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { ORBIT_VIEW_CONTAINER_COMMAND } from '../../src/constants';
 import { refreshStartupProviders } from '../../src/extension';
 
 interface ExtensionManifest {
@@ -62,6 +63,20 @@ suite('Orbit Extension', () => {
     expectedCommands.forEach((cmd) => {
       assert.ok(allCommands.includes(cmd), `Command ${cmd} should be registered`);
     });
+  });
+
+  test('Should expose the Orbit activity bar container command', async () => {
+    const allCommands = await vscode.commands.getCommands(true);
+    const invalidHealthViewCommand = `${ORBIT_VIEW_CONTAINER_COMMAND}.health`;
+
+    assert.ok(
+      allCommands.includes(ORBIT_VIEW_CONTAINER_COMMAND),
+      `${ORBIT_VIEW_CONTAINER_COMMAND} should be registered by VS Code`
+    );
+    assert.ok(
+      !allCommands.includes(invalidHealthViewCommand),
+      'Invalid health-view workbench command should not be registered'
+    );
   });
 
   test('Should register all tree views', () => {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../../config';
-import { VIEW_ITEM_CONTEXT } from '../../constants';
+import { ORBIT_VIEW_CONTAINER_COMMAND, VIEW_ITEM_CONTEXT } from '../../constants';
 import { HealthClient } from './HealthClient';
 import type { McpServer, DashboardData } from './types';
 import { Logger } from '../../utils/logger';
@@ -100,7 +100,7 @@ export class HealthProvider
               )
               .then((selection) => {
                 if (selection === 'Open Health Monitor') {
-                  void vscode.commands.executeCommand('workbench.view.extension.orbit');
+                  void vscode.commands.executeCommand(ORBIT_VIEW_CONTAINER_COMMAND);
                 }
               });
           }

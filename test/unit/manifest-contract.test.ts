@@ -1,14 +1,27 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { COMMAND_IDS, CONFIG_KEYS, VIEW_IDS } from '../../src/constants';
+import {
+  COMMAND_IDS,
+  CONFIG_KEYS,
+  ORBIT_VIEW_CONTAINER_COMMAND,
+  VIEW_IDS,
+} from '../../src/constants';
 
 interface ManifestCommand {
   command: string;
 }
 
+interface ManifestMenuItem {
+  command?: string;
+}
+
 interface ManifestView {
   id: string;
+}
+
+interface ManifestWelcomeItem {
+  contents?: string;
 }
 
 interface Manifest {
@@ -18,14 +31,20 @@ interface Manifest {
     configuration: {
       properties: Record<string, unknown>;
     };
+    menus?: Record<string, ManifestMenuItem[]>;
     views: {
       orbit: ManifestView[];
     };
+    viewsWelcome?: ManifestWelcomeItem[];
   };
 }
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'package.json');
+const COMMAND_URI_PATTERN = /command:([A-Za-z0-9_.-]+)/g;
+const TEXT_FILE_EXTENSIONS = new Set(['.json', '.md', '.ts', '.tsx']);
+const WORKBENCH_VIEW_COMMAND_PATTERN = /workbench\.view\.extension\.[A-Za-z0-9_.-]+/g;
+const SOURCE_SCAN_TARGETS = ['package.json', 'README.md', 'src', 'webview-ui/src', 'test'];
 
 function readManifest(): Manifest {
   return JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')) as Manifest;
@@ -33,6 +52,31 @@ function readManifest(): Manifest {
 
 function objectValues(record: Record<string, string>): string[] {
   return Object.values(record).sort();
+}
+
+function collectTextFiles(target: string): string[] {
+  const fullPath = path.join(REPO_ROOT, target);
+  const stat = fs.statSync(fullPath);
+  if (stat.isFile()) {
+    return TEXT_FILE_EXTENSIONS.has(path.extname(fullPath)) ? [fullPath] : [];
+  }
+  return fs.readdirSync(fullPath, { withFileTypes: true }).flatMap((entry) => {
+    const child = path.join(target, entry.name);
+    return collectTextFiles(child);
+  });
+}
+
+function repositoryTextFiles(): Array<{ relativePath: string; text: string }> {
+  return SOURCE_SCAN_TARGETS.flatMap((target) =>
+    collectTextFiles(target).map((filePath) => ({
+      relativePath: path.relative(REPO_ROOT, filePath),
+      text: fs.readFileSync(filePath, 'utf8'),
+    }))
+  );
+}
+
+function commandUriReferences(text: string): string[] {
+  return Array.from(text.matchAll(COMMAND_URI_PATTERN), (match) => match[1] ?? '');
 }
 
 suite('Manifest Contracts', () => {
@@ -77,6 +121,53 @@ suite('Manifest Contracts', () => {
           `${event} should reference a contributed view`
         );
       }
+    });
+  });
+
+  test('Should keep manifest menu and welcome command references registered', () => {
+    const manifest = readManifest();
+    const contributedCommands = new Set(
+      manifest.contributes.commands.map(({ command }) => command)
+    );
+
+    Object.entries(manifest.contributes.menus ?? {}).forEach(([menu, items]) => {
+      items.forEach(({ command }) => {
+        if (!command) return;
+        assert.ok(contributedCommands.has(command), `${menu} references registered ${command}`);
+      });
+    });
+
+    (manifest.contributes.viewsWelcome ?? []).forEach(({ contents }) => {
+      commandUriReferences(contents ?? '').forEach((command) => {
+        assert.ok(
+          contributedCommands.has(command),
+          `viewsWelcome references registered ${command}`
+        );
+      });
+    });
+  });
+
+  test('Should keep command URI links pointed at registered commands', () => {
+    const allowedCommands = new Set([...Object.values(COMMAND_IDS), ORBIT_VIEW_CONTAINER_COMMAND]);
+
+    repositoryTextFiles().forEach(({ relativePath, text }) => {
+      commandUriReferences(text).forEach((command) => {
+        assert.ok(allowedCommands.has(command), `${relativePath} links to registered ${command}`);
+      });
+    });
+  });
+
+  test('Should keep workbench view commands pointed at the Orbit container', () => {
+    repositoryTextFiles().forEach(({ relativePath, text }) => {
+      Array.from(text.matchAll(WORKBENCH_VIEW_COMMAND_PATTERN), (match) => match[0]).forEach(
+        (command) => {
+          assert.strictEqual(
+            command,
+            ORBIT_VIEW_CONTAINER_COMMAND,
+            `${relativePath} should open the Orbit view container`
+          );
+        }
+      );
     });
   });
 

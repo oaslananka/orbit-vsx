@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../config';
 import type { HealthProvider } from '../panels/health/HealthProvider';
-import { VIEW_IDS } from '../constants';
+import { ORBIT_VIEW_CONTAINER_COMMAND } from '../constants';
 
 export class StatusBarController implements vscode.Disposable {
   private item: vscode.StatusBarItem;
@@ -11,7 +11,7 @@ export class StatusBarController implements vscode.Disposable {
   constructor(healthProvider: HealthProvider) {
     this.healthProvider = healthProvider;
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    this.item.command = `workbench.view.extension.${VIEW_IDS.HEALTH}`;
+    this.item.command = ORBIT_VIEW_CONTAINER_COMMAND;
     this.item.tooltip = 'Orbit - Click to open Health Monitor';
   }
 
