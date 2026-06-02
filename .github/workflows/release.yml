@@ -43,6 +43,9 @@ jobs:
       - name: Package VSIX
         run: pnpm exec vsce package --no-dependencies
 
+      - name: Run packaged extension smoke test
+        run: xvfb-run -a pnpm run smoke:package
+
       - name: Publish to VS Code Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

@@ -13,6 +13,6 @@
     "skipLibCheck": true,
     "types": ["node", "mocha"]
   },
-  "include": ["runTests.ts", "suite/**/*.ts", "unit/**/*.ts"],
+  "include": ["runTests.ts", "packageSmoke.ts", "suite/**/*.ts", "smoke/**/*.ts", "unit/**/*.ts"],
   "exclude": ["node_modules", "../dist"]
 }

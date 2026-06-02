@@ -465,6 +465,8 @@
     "format": "prettier --write \"**/*.{json,md,yml,ts,tsx,js,mjs}\"",
     "test": "node ./test/runTests.js",
     "test:unit": "mocha --ui tdd \"test/unit/**/*.test.js\"",
+    "test:package": "pnpm run package && pnpm run smoke:package",
+    "smoke:package": "tsc -p test/tsconfig.json && node ./test/packageSmoke.js",
     "pretest:unit": "pnpm run build && tsc -p test/tsconfig.json",
     "precoverage": "pnpm run pretest:unit",
     "coverage": "c8 --config .c8rc.json mocha --ui tdd \"test/unit/**/*.test.js\"",
