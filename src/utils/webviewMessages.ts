@@ -10,7 +10,7 @@ type WebviewMessageRecord = {
 
 /** Returns a safe object view of a message posted from a webview. */
 export function getWebviewMessageRecord(message: unknown): WebviewMessageRecord | undefined {
-  if (typeof message !== 'object' || message === null) {
+  if (typeof message !== 'object' || message === null || Array.isArray(message)) {
     return undefined;
   }
   return message as WebviewMessageRecord;

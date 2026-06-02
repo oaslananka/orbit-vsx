@@ -21,7 +21,7 @@ export function EmptyState({
   const hasAction = actionLabel !== undefined && onAction !== undefined;
 
   return (
-    <div style={styles.container} role="status" aria-label={title}>
+    <div style={styles.container} role="status">
       <div style={styles.illustration} aria-hidden="true">
         <svg viewBox="0 0 48 48" width="48" height="48" focusable="false">
           {renderIcon(icon)}
@@ -38,38 +38,52 @@ export function EmptyState({
   );
 }
 
+const iconStrokeProps = {
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  strokeWidth: 2.4,
+};
+
+const iconRenderers: Record<EmptyStateIcon, () => ReactElement> = {
+  pulse: () => <path {...iconStrokeProps} d="M4 25h8l4-12 8 24 5-14h15" />,
+  bug: () => (
+    <>
+      <path {...iconStrokeProps} d="M16 18h16v15a8 8 0 0 1-16 0z" />
+      <path {...iconStrokeProps} d="M19 18a5 5 0 0 1 10 0M10 24h6M32 24h6M11 34h6M31 34h7" />
+    </>
+  ),
+  graph: () => (
+    <>
+      <path {...iconStrokeProps} d="M16 32 28 20l8 8" />
+      <circle {...iconStrokeProps} cx="14" cy="34" r="4" />
+      <circle {...iconStrokeProps} cx="29" cy="19" r="4" />
+      <circle {...iconStrokeProps} cx="38" cy="29" r="4" />
+    </>
+  ),
+  plug: () => (
+    <>
+      <path {...iconStrokeProps} d="M18 12v11M30 12v11M14 23h20v5a10 10 0 0 1-20 0z" />
+      <path {...iconStrokeProps} d="M24 38v4M19 42h10" />
+    </>
+  ),
+  server: () => (
+    <>
+      <path {...iconStrokeProps} d="M12 12h24v10H12zM12 26h24v10H12z" />
+      <path {...iconStrokeProps} d="M17 17h.1M17 31h.1M22 17h10M22 31h10" />
+    </>
+  ),
+  checklist: () => (
+    <>
+      <path {...iconStrokeProps} d="M14 15l3 3 5-6M14 29l3 3 5-6M27 17h8M27 31h8" />
+      <path {...iconStrokeProps} d="M9 8h30v32H9z" />
+    </>
+  ),
+};
+
 function renderIcon(icon: EmptyStateIcon): ReactElement {
-  const strokeProps = {
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    strokeWidth: 2.4,
-  };
-
-  if (icon === 'pulse') {
-    return <path {...strokeProps} d="M4 25h8l4-12 8 24 5-14h15" />;
-  }
-  if (icon === 'bug') {
-    return (
-      <>
-        <path {...strokeProps} d="M16 18h16v15a8 8 0 0 1-16 0z" />
-        <path {...strokeProps} d="M19 18a5 5 0 0 1 10 0M10 24h6M32 24h6M11 34h6M31 34h7" />
-      </>
-    );
-  }
-  if (icon === 'graph') {
-    return (
-      <>
-        <path {...strokeProps} d="M16 32 28 20l8 8" />
-        <circle {...strokeProps} cx="14" cy="34" r="4" />
-        <circle {...strokeProps} cx="29" cy="19" r="4" />
-        <circle {...strokeProps} cx="38" cy="29" r="4" />
-      </>
-    );
-  }
-
-  return <path {...strokeProps} d="M14 31h20M10 24h28M14 17h20M19 10h10M19 38h10" />;
+  return iconRenderers[icon]();
 }
 
 const styles: Record<string, CSSProperties> = {

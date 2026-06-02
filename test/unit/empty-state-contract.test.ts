@@ -132,6 +132,7 @@ suite('Empty State Contracts', () => {
       false
     );
     assert.strictEqual(executedCommands.length, 1);
+    assert.strictEqual(executeAllowedWebviewCommand([], allowedCommands), false);
   });
 
   test('Should expose clipboard text only for valid clipboard messages', () => {
@@ -140,6 +141,7 @@ suite('Empty State Contracts', () => {
       'agent-card'
     );
     assert.strictEqual(getWebviewClipboardText({ text: 42, type: 'copyToClipboard' }), undefined);
+    assert.strictEqual(getWebviewClipboardText([]), undefined);
     assert.strictEqual(getWebviewClipboardText(null), undefined);
   });
 
@@ -147,7 +149,10 @@ suite('Empty State Contracts', () => {
     const component = readWorkspaceFile('webview-ui/src/components/EmptyState.tsx');
     assert.match(component, /<svg/);
     assert.match(component, /<button/);
-    assert.match(component, /aria-label/);
+    assert.match(component, /aria-label={actionLabel}/);
+    assert.doesNotMatch(component, /role="status" aria-label/);
+    assert.ok(component.includes('plug: ()'), 'EmptyState should render a plug icon');
+    assert.ok(component.includes('server: ()'), 'EmptyState should render a server icon');
 
     [
       ['webview-ui/src/health/App.tsx', 'No servers connected', COMMAND_IDS.HEALTH_ADD_SERVER],
