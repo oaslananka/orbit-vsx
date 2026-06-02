@@ -1,0 +1,72 @@
+name: Bug report
+description: Report broken or incorrect Orbit behavior.
+title: 'bug: '
+labels: ['bug', 'type:bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for reproducible defects.
+        Do not include secrets, tokens, cookies, private URLs, or exploit details.
+  - type: input
+    id: version
+    attributes:
+      label: Orbit version
+      description: Extension version or commit SHA.
+      placeholder: '0.5.2'
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Health Monitor
+        - Debug Recorder
+        - A2A Explorer
+        - MCP Explorer
+        - Sessions or Tasks
+        - Extension activation
+        - CI, packaging, or release
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest reproducible sequence.
+      placeholder: |
+        1. Open ...
+        2. Run ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Redact secrets and private URLs before attaching.
+    validations:
+      required: false
+  - type: checkboxes
+    id: verification
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues for duplicates.
+          required: true
+        - label: I removed secrets and sensitive data from this report.
+          required: true

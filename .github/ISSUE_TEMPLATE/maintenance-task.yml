@@ -1,0 +1,53 @@
+name: Maintenance or task
+description: Track maintenance, governance, test, CI, dependency, or documentation work.
+title: 'chore: '
+labels: ['type:task']
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Governance
+        - Documentation
+        - Testing or coverage
+        - CI/CD
+        - Dependencies
+        - Packaging or release
+        - Extension internals
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or gap
+      description: What is missing, outdated, flaky, or risky?
+    validations:
+      required: true
+  - type: textarea
+    id: required-changes
+    attributes:
+      label: Required changes
+      description: List the concrete work needed for this task to be complete.
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: Commands, files, or external state that should prove the task is done.
+      placeholder: |
+        - pnpm run format:check
+        - pnpm run lint
+        - pnpm run typecheck
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I searched existing issues for duplicates.
+          required: true
+        - label: I removed secrets and sensitive data from this report.
+          required: true

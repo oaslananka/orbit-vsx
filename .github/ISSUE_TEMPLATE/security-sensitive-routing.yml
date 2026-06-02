@@ -1,0 +1,41 @@
+name: Security-sensitive report routing
+description: Get routed to the private security process without public exploit details.
+title: 'security: private report requested'
+labels: ['governance', 'area:governance']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not disclose exploit details, credentials, tokens, private URLs,
+        screenshots with secrets, or proof-of-concept payloads in this public issue.
+
+        Prefer the private GitHub vulnerability report route:
+        https://github.com/oaslananka/orbit-vsx/security/advisories/new
+  - type: dropdown
+    id: category
+    attributes:
+      label: Security-sensitive category
+      options:
+        - Vulnerability report needs private intake
+        - Accidentally exposed secret or token
+        - Suspicious dependency, CI, or release behavior
+        - Unsure whether this is security-sensitive
+    validations:
+      required: true
+  - type: textarea
+    id: public-summary
+    attributes:
+      label: Safe public summary
+      description: Provide only high-level routing context. Do not include exploit details.
+      placeholder: 'I need a private channel for a potential extension-host vulnerability.'
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checks
+      options:
+        - label: I did not include exploit details, credentials, tokens, private URLs, or secrets.
+          required: true
+        - label: I reviewed SECURITY.md and understand the private reporting route.
+          required: true

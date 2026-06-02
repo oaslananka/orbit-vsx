@@ -19,6 +19,9 @@ pnpm-workspace.yaml
 .codex-checkpoints/
 .c8rc.json
 coverage/
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
 .gitignore
 renovate.json
 *.vsix
