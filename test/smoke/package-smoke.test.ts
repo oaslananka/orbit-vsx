@@ -30,10 +30,14 @@ const EXPECTED_README_SECTIONS = [
   '### Health Monitor',
   '### Debug Recorder',
   '### A2A Explorer',
+  '### MCP Explorer',
+  '## Quick Start',
   '## Requirements',
   '## Configuration',
+  '## Troubleshooting',
   '## License',
 ];
+const FORBIDDEN_README_CONTENT = ['Publishing (Maintainers)', 'VSCE_PAT', 'OVSX_PAT'];
 const SHOW_EXTENSION_DETAILS_COMMAND = 'workbench.extensions.action.showExtensionsWithIds';
 
 function getOrbitExtension(): vscode.Extension<unknown> {
@@ -96,6 +100,17 @@ suite('Packaged Orbit VSIX', () => {
     EXPECTED_README_SECTIONS.forEach((section) => {
       assert.ok(readme.includes(section), `Packaged README should include ${section}`);
     });
+    const normalizedReadme = readme.toLowerCase();
+    FORBIDDEN_README_CONTENT.forEach((content) => {
+      assert.ok(
+        !normalizedReadme.includes(content.toLowerCase()),
+        `Packaged README should not include ${content}`
+      );
+    });
+    assert.ok(
+      !fs.existsSync(path.join(extension.extensionPath, 'RELEASING.md')),
+      'Packaged extension should exclude maintainer-only release instructions'
+    );
     await vscode.commands.executeCommand(SHOW_EXTENSION_DETAILS_COMMAND, [EXTENSION_ID]);
   });
 });

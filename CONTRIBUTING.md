@@ -62,6 +62,12 @@ Every pull request should include:
 Address review comments with follow-up commits and keep the PR body current if
 scope changes.
 
+## Release Operations
+
+Maintainer-only release steps live in `RELEASING.md`. Keep publishing secrets,
+registry tokens, and release automation mechanics out of the public Marketplace
+README.
+
 ## Security
 
 Do not include credentials, tokens, cookies, private keys, or private service
