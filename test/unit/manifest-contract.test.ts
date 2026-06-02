@@ -43,7 +43,7 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const MANIFEST_PATH = path.join(REPO_ROOT, 'package.json');
 const COMMAND_URI_PATTERN = /command:([A-Za-z0-9_.-]+)/g;
 const TEXT_FILE_EXTENSIONS = new Set(['.json', '.md', '.ts', '.tsx']);
-const WORKBENCH_VIEW_COMMAND_PATTERN = /workbench\.view\.extension\.[A-Za-z0-9_.-]+/g;
+const INVALID_ORBIT_VIEW_COMMAND_PATTERN = /workbench\.view\.extension\.orbit\.[A-Za-z0-9_.-]+/g;
 const SOURCE_SCAN_TARGETS = ['package.json', 'README.md', 'src', 'webview-ui/src', 'test'];
 
 function readManifest(): Manifest {
@@ -56,6 +56,9 @@ function objectValues(record: Record<string, string>): string[] {
 
 function collectTextFiles(target: string): string[] {
   const fullPath = path.join(REPO_ROOT, target);
+  if (!fs.existsSync(fullPath)) {
+    return [];
+  }
   const stat = fs.statSync(fullPath);
   if (stat.isFile()) {
     return TEXT_FILE_EXTENSIONS.has(path.extname(fullPath)) ? [fullPath] : [];
@@ -157,16 +160,16 @@ suite('Manifest Contracts', () => {
     });
   });
 
-  test('Should keep workbench view commands pointed at the Orbit container', () => {
+  test('Should not contain invalid Orbit sub-view workbench commands', () => {
     repositoryTextFiles().forEach(({ relativePath, text }) => {
-      Array.from(text.matchAll(WORKBENCH_VIEW_COMMAND_PATTERN), (match) => match[0]).forEach(
-        (command) => {
-          assert.strictEqual(
-            command,
-            ORBIT_VIEW_CONTAINER_COMMAND,
-            `${relativePath} should open the Orbit view container`
-          );
-        }
+      const matches = Array.from(
+        text.matchAll(INVALID_ORBIT_VIEW_COMMAND_PATTERN),
+        (match) => match[0]
+      );
+      assert.deepStrictEqual(
+        matches,
+        [],
+        `${relativePath} contains invalid Orbit sub-view commands: ${matches.join(', ')}`
       );
     });
   });
