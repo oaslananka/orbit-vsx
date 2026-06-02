@@ -15,7 +15,6 @@ Install dependencies:
 
 ```powershell
 corepack enable
-corepack prepare pnpm@11.3.0 --activate
 pnpm install --frozen-lockfile
 ```
 
