@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.2] - 2026-06-02
+
+### Fixed
+
+- Removed `actions/setup-node` from CI and release workflows to avoid deprecation warnings emitted by the action runtime during release verification.
+
 ## [0.5.1] - 2026-06-02
 
 ### Fixed

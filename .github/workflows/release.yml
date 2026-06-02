@@ -18,15 +18,21 @@ jobs:
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
-      - name: Enable pnpm
+      - name: Select Node.js 24 and enable pnpm
+        shell: bash
         run: |
+          set -euo pipefail
+          node_dir="$(find /opt/hostedtoolcache/node -path '*/24.*/x64/bin' -type d | sort -V | tail -n 1)"
+          if [ -z "$node_dir" ]; then
+            echo "Node.js 24 was not found in /opt/hostedtoolcache/node" >&2
+            exit 1
+          fi
+          echo "$node_dir" >> "$GITHUB_PATH"
+          export PATH="$node_dir:$PATH"
+          node --version
           corepack enable
           corepack prepare pnpm@11.3.0 --activate
-
-      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
-        with:
-          node-version: 22
-          cache: pnpm
+          pnpm --version
 
       - run: pnpm install --frozen-lockfile
 
