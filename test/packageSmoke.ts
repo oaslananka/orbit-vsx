@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { spawn, spawnSync, type SpawnOptions } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 interface PackageManifest {
   name: string;
@@ -13,15 +13,11 @@ interface ProcessResult {
   signal: NodeJS.Signals | null;
 }
 
-interface CommandInvocation {
-  command: string;
-  args: string[];
-}
-
 const LOG_FILE_LIMIT = 12;
 const LOG_TAIL_LINES = 80;
 const SMOKE_TIMEOUT_MS = 180000;
 const PACKAGE_JSON_PATH = path.resolve(__dirname, '..', 'package.json');
+const CLI_MODULE_PATH_PARTS = ['resources', 'app', 'out', 'cli.js'];
 
 function readPackageManifest(): PackageManifest {
   return JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, 'utf8')) as PackageManifest;
@@ -41,29 +37,36 @@ function writeOutput(stdout: string, stderr: string): void {
   if (stderr) process.stderr.write(stderr);
 }
 
-function runCommand(command: string, args: string[], options: SpawnOptions): void {
-  const result = spawnSync(command, args, {
-    ...options,
+function findCliModule(vscodeExecutablePath: string): string {
+  const installRoot = path.dirname(vscodeExecutablePath);
+  const candidates = [
+    path.join(installRoot, ...CLI_MODULE_PATH_PARTS),
+    ...fs
+      .readdirSync(installRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(installRoot, entry.name, ...CLI_MODULE_PATH_PARTS)),
+  ];
+  const cliModulePath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!cliModulePath) {
+    throw new Error(`VS Code CLI module not found under ${installRoot}`);
+  }
+  return cliModulePath;
+}
+
+function runCodeCli(vscodeExecutablePath: string, args: string[]): void {
+  const cliModulePath = findCliModule(vscodeExecutablePath);
+  const result = spawnSync(vscodeExecutablePath, [cliModulePath, ...args], {
     encoding: 'utf8',
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', VSCODE_DEV: '' },
     shell: false,
   });
   writeOutput(String(result.stdout ?? ''), String(result.stderr ?? ''));
+  if (result.error) {
+    throw result.error;
+  }
   if (result.status !== 0) {
-    throw new Error(`${command} ${args.join(' ')} failed with code ${result.status}`);
+    throw new Error(`VS Code CLI ${args.join(' ')} failed with code ${result.status}`);
   }
-}
-
-function profileArgsRemoved(args: string[]): string[] {
-  return args.filter(
-    (arg) => !arg.startsWith('--user-data-dir') && !arg.startsWith('--extensions-dir')
-  );
-}
-
-function buildCliInvocation(cliPath: string, args: string[]): CommandInvocation {
-  if (process.platform !== 'win32') {
-    return { command: cliPath, args };
-  }
-  return { command: 'cmd.exe', args: ['/d', '/s', '/c', cliPath, ...args] };
 }
 
 function stopProcessTree(processId: number): void {
@@ -91,7 +94,10 @@ async function runVSCode(executablePath: string, args: string[]): Promise<Proces
       timedOut = true;
       if (child.pid) stopProcessTree(child.pid);
     }, SMOKE_TIMEOUT_MS);
-    child.on('error', reject);
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
     child.on('close', (code, signal) => {
       clearTimeout(timeout);
       if (timedOut) {
@@ -182,10 +188,8 @@ function buildLaunchArgs(
 async function main(): Promise<void> {
   let profileRoot = '';
   try {
-    const { downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath } =
-      await import('@vscode/test-electron');
+    const { downloadAndUnzipVSCode } = await import('@vscode/test-electron');
     const executablePath = await downloadAndUnzipVSCode();
-    const [cliPath, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(executablePath);
     const vsixPath = findPackagedVsix();
     const extensionTestsPath = path.resolve(__dirname, './smoke/index');
     profileRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-vsix-smoke-'));
@@ -193,15 +197,13 @@ async function main(): Promise<void> {
     const extensionsDir = path.join(profileRoot, 'extensions');
     const userDataDir = path.join(profileRoot, 'user-data');
 
-    const installInvocation = buildCliInvocation(cliPath, [
-      ...profileArgsRemoved(cliArgs),
+    runCodeCli(executablePath, [
       `--user-data-dir=${userDataDir}`,
       `--extensions-dir=${extensionsDir}`,
       '--install-extension',
       vsixPath,
       '--force',
     ]);
-    runCommand(installInvocation.command, installInvocation.args, { env: process.env });
     const result = await runVSCode(
       executablePath,
       buildLaunchArgs(profileRoot, extensionTestsPath, harnessPath)
@@ -211,9 +213,8 @@ async function main(): Promise<void> {
     }
   } catch (err) {
     if (profileRoot) dumpSmokeLogs(profileRoot);
-    process.stderr.write(
-      `Failed to run packaged smoke test: ${err instanceof Error ? err.message : String(err)}\n`
-    );
+    const errorMessage = err instanceof Error ? (err.stack ?? err.message) : String(err);
+    process.stderr.write(`Failed to run packaged smoke test: ${errorMessage}\n`);
     process.exit(1);
   } finally {
     if (profileRoot) {

@@ -80,12 +80,12 @@ suite('Packaged Orbit VSIX', () => {
 
     assert.ok(allCommands.includes(containerCommand), `${containerCommand} should be registered`);
     assert.ok(!allCommands.includes(`${containerCommand}.health`));
-    await assert.doesNotReject(Promise.resolve(vscode.commands.executeCommand(containerCommand)));
+    await vscode.commands.executeCommand(containerCommand);
 
     for (const viewId of CORE_VIEW_IDS) {
       const focusCommand = `${viewId}.focus`;
       assert.ok(allCommands.includes(focusCommand), `${focusCommand} should be registered`);
-      await assert.doesNotReject(Promise.resolve(vscode.commands.executeCommand(focusCommand)));
+      await vscode.commands.executeCommand(focusCommand);
     }
   });
 
@@ -96,10 +96,6 @@ suite('Packaged Orbit VSIX', () => {
     EXPECTED_README_SECTIONS.forEach((section) => {
       assert.ok(readme.includes(section), `Packaged README should include ${section}`);
     });
-    await assert.doesNotReject(
-      Promise.resolve(
-        vscode.commands.executeCommand(SHOW_EXTENSION_DETAILS_COMMAND, [EXTENSION_ID])
-      )
-    );
+    await vscode.commands.executeCommand(SHOW_EXTENSION_DETAILS_COMMAND, [EXTENSION_ID]);
   });
 });

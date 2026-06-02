@@ -7,7 +7,7 @@ export function run(): Promise<void> {
     color: true,
     timeout: 20000,
   });
-  const testsRoot = path.resolve(__dirname, '..', '..', 'test', 'smoke');
+  const testsRoot = __dirname;
   mocha.addFile(path.resolve(testsRoot, 'package-smoke.test.js'));
 
   return new Promise((resolve, reject) => {
