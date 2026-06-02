@@ -80,7 +80,7 @@ function debugSession(id = 'session-1'): Record<string, unknown> {
 }
 
 suite('HTTP and Client Contracts', () => {
-  suiteTeardown(() => {
+  teardown(() => {
     globalThis.fetch = originalFetch;
   });
 

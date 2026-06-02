@@ -104,14 +104,15 @@ suite('Manifest Contracts', () => {
         command.startsWith(prefix)
       );
       assert.ok(group, `${command} should map to a command group`);
-      assert.ok(fs.existsSync(path.join(REPO_ROOT, commandGroupFiles.get(group) ?? '')));
+      const file = commandGroupFiles.get(group);
+      assert.ok(file, `${group} should define an implementation file`);
+      assert.ok(fs.existsSync(path.join(REPO_ROOT, file)), `${file} exists`);
     });
 
     manifest.contributes.views.orbit.forEach(({ id }) => {
-      assert.ok(
-        fs.existsSync(path.join(REPO_ROOT, viewFiles.get(id) ?? '')),
-        `${id} view file exists`
-      );
+      const file = viewFiles.get(id);
+      assert.ok(file, `${id} should define an implementation file`);
+      assert.ok(fs.existsSync(path.join(REPO_ROOT, file)), `${id} view file exists at ${file}`);
     });
   });
 });
