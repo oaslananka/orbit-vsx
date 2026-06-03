@@ -1,4 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>oaslananka/.github"]
+  "extends": ["github>oaslananka/.github"],
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["engines"],
+      "matchPackageNames": ["vscode"],
+      "enabled": false
+    }
+  ]
 }
