@@ -11,9 +11,9 @@ interface PackageManifest {
 
 interface RenovatePackageRule {
   enabled?: boolean;
-  matchDepTypes?: string[];
-  matchManagers?: string[];
-  matchPackageNames?: string[];
+  matchDepTypes?: unknown;
+  matchManagers?: unknown;
+  matchPackageNames?: unknown;
 }
 
 interface RenovateConfig {
@@ -34,6 +34,10 @@ function readJsonFile<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
 }
 
+function stringArrayIncludes(value: unknown, expected: string): boolean {
+  return Array.isArray(value) && value.includes(expected);
+}
+
 suite('Renovate Contracts', () => {
   test('Should keep the VS Code API floor tied to the supported extension baseline', () => {
     const manifest = readJsonFile<PackageManifest>(PACKAGE_MANIFEST_PATH);
@@ -47,9 +51,9 @@ suite('Renovate Contracts', () => {
     const rule = (config.packageRules ?? []).find(
       (candidate) =>
         candidate.enabled === false &&
-        candidate.matchManagers?.includes(NPM_MANAGER) &&
-        candidate.matchDepTypes?.includes(VSCODE_ENGINE_DEP_TYPE) &&
-        candidate.matchPackageNames?.includes(VSCODE_PACKAGE_NAME)
+        stringArrayIncludes(candidate.matchManagers, NPM_MANAGER) &&
+        stringArrayIncludes(candidate.matchDepTypes, VSCODE_ENGINE_DEP_TYPE) &&
+        stringArrayIncludes(candidate.matchPackageNames, VSCODE_PACKAGE_NAME)
     );
 
     assert.ok(rule, 'Renovate should disable npm engines.vscode updates');
