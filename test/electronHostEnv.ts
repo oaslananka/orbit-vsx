@@ -1,6 +1,11 @@
+const ELECTRON_HOST_ENV_BLOCKLIST = new Set(['ELECTRON_RUN_AS_NODE', 'VSCODE_DEV']);
+
 export function createElectronHostEnv(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const env = { ...source };
-  delete env.ELECTRON_RUN_AS_NODE;
-  delete env.VSCODE_DEV;
+  Object.keys(env).forEach((key) => {
+    if (ELECTRON_HOST_ENV_BLOCKLIST.has(key.toUpperCase())) {
+      delete env[key];
+    }
+  });
   return env;
 }
