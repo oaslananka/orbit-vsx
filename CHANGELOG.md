@@ -2,19 +2,30 @@
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-06-11
+
+### Added
+
+- Fleet standards configs: `.npmrc`, `.github/dependabot.yml`, `.commitlintrc.json`, `.pre-commit-config.yaml`.
+- Org-only guard (`github.repository_owner == 'oaslananka'`) on all CI/CD workflow jobs.
+- `.prettierignore` for cleaner formatting output.
+
 ### Changed
 
-- Advanced the development manifest beyond the latest published release.
-- Added repository-wide verification tooling and contributor setup guidance.
+- Migrated `renovate.json` to `config:recommended` with rate limits, auto-merge for patches and devDependencies.
+- Updated `@vscode/vsce` to 3.9.2, `prettier` to 3.8.4, `@typescript-eslint/*` to 8.61.0, `concurrently` to 10.0.3, `ovsx` to 1.0.0.
+- Updated `CONTRIBUTING.md` to reference Taskfile commands.
 
 ### Fixed
 
-- Isolated VS Code test hosts from inherited Electron Node-mode flags.
+- Harden CI/CD release workflow with merge-base verification and create-or-update release support.
+- Health provider error handling, race conditions, and debounce disposal.
+- Added `escapeHtml` utility for proper XSS prevention in webviews.
+- Improved test infrastructure with `cleanGenerated.mjs` and new contract tests.
 
-### Security
+### Removed
 
-- Added release SBOMs, checksums, and build provenance attestations.
-- Patched the vulnerable transitive `shell-quote` dependency.
+- Legacy `.eslintrc.json` (ESLint 9+ uses flat config `eslint.config.mjs`).
 
 ## [0.5.2] - 2026-06-02
 
