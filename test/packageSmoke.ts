@@ -60,6 +60,7 @@ function runCodeCli(vscodeExecutablePath: string, args: string[]): void {
     encoding: 'utf8',
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', VSCODE_DEV: '' },
     shell: false,
+    timeout: SMOKE_TIMEOUT_MS,
   });
   writeOutput(String(result.stdout ?? ''), String(result.stderr ?? ''));
   if (result.error) {
@@ -216,7 +217,7 @@ async function main(): Promise<void> {
     if (profileRoot) dumpSmokeLogs(profileRoot);
     const errorMessage = err instanceof Error ? (err.stack ?? err.message) : String(err);
     process.stderr.write(`Failed to run packaged smoke test: ${errorMessage}\n`);
-    process.exit(1);
+    process.exitCode = 1;
   } finally {
     if (profileRoot) {
       fs.rmSync(profileRoot, { recursive: true, force: true });

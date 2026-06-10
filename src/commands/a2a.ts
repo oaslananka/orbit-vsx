@@ -92,6 +92,7 @@ export function registerA2ACommands(
         const execFileAsync = promisify(execFile);
         await execFileAsync(cliPath, ['scaffold', name, '--adapter', adapter], {
           encoding: 'utf-8',
+          timeout: 30000,
         });
         vscode.window.showInformationMessage(`Agent "${name}" scaffolded.`);
         a2aProvider.refresh();

@@ -9,6 +9,23 @@ interface TestProcessResult {
   signal: NodeJS.Signals | null;
 }
 
+const TEST_HOST_TIMEOUT_MS = 180000;
+
+function stopProcessTree(processId: number): void {
+  if (process.platform === 'win32') {
+    spawn('taskkill', ['/pid', String(processId), '/t', '/f'], {
+      shell: false,
+      stdio: 'ignore',
+    });
+    return;
+  }
+  try {
+    process.kill(processId, 'SIGKILL');
+  } catch {
+    // Process already exited.
+  }
+}
+
 async function runVSCodeTests(executablePath: string, args: string[]): Promise<TestProcessResult> {
   const child = spawn(executablePath, args, {
     env: createElectronHostEnv(process.env),
@@ -19,8 +36,23 @@ async function runVSCodeTests(executablePath: string, args: string[]): Promise<T
   child.stderr.on('data', (chunk) => process.stderr.write(chunk));
 
   return new Promise((resolve, reject) => {
-    child.on('error', reject);
-    child.on('close', (code, signal) => resolve({ code, signal }));
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      if (child.pid) stopProcessTree(child.pid);
+    }, TEST_HOST_TIMEOUT_MS);
+    child.on('error', (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.on('close', (code, signal) => {
+      clearTimeout(timeout);
+      if (timedOut) {
+        reject(new Error(`VS Code test host timed out after ${TEST_HOST_TIMEOUT_MS}ms`));
+      } else {
+        resolve({ code, signal });
+      }
+    });
   });
 }
 
@@ -56,7 +88,7 @@ async function main(): Promise<void> {
     process.stderr.write(
       `Failed to run tests: ${err instanceof Error ? err.message : String(err)}\n`
     );
-    process.exit(1);
+    process.exitCode = 1;
   } finally {
     if (profileRoot) {
       fs.rmSync(profileRoot, { recursive: true, force: true });
@@ -64,4 +96,4 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+void main();

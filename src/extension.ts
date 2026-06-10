@@ -82,7 +82,16 @@ export function activate(context: vscode.ExtensionContext): void {
   a2aProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
   mcpProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
 
-  context.subscriptions.push(healthTree, debugTree, a2aTree, mcpTree);
+  context.subscriptions.push(
+    healthProvider,
+    debugProvider,
+    a2aProvider,
+    mcpProvider,
+    healthTree,
+    debugTree,
+    a2aTree,
+    mcpTree
+  );
 
   refreshStartupProviders(logger, healthProvider, debugProvider, a2aProvider, mcpProvider);
 
@@ -139,10 +148,7 @@ export function activate(context: vscode.ExtensionContext): void {
         });
     };
 
-    context.subscriptions.push(
-      vscode.workspace.onDidSaveTextDocument(validateAgentCard),
-      vscode.workspace.onDidChangeTextDocument((e) => validateAgentCard(e.document))
-    );
+    context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(validateAgentCard));
   }
 
   context.subscriptions.push(
@@ -152,6 +158,7 @@ export function activate(context: vscode.ExtensionContext): void {
         healthProvider.onConfigChanged();
         debugProvider.onConfigChanged();
         a2aProvider.onConfigChanged();
+        mcpProvider.onConfigChanged();
         statusBar.onConfigChanged();
       }
     }),

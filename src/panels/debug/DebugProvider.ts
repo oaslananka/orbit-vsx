@@ -86,6 +86,9 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
       if (config.debug.enabled) {
         this.sessions = await this.client.listSessions();
         this.buildGroups();
+      } else {
+        this.sessions = [];
+        this.buildGroups();
       }
       this._error = undefined;
     } catch (error) {
@@ -123,7 +126,6 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
           `Commands: ${cmds.length}`,
         true
       );
-      md.isTrusted = true;
       item.tooltip = md;
     }
     return item;
@@ -174,7 +176,11 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
 
   onConfigChanged(): void {
     this.rebuildClient();
+    void this.refresh();
   }
 
-  dispose(): void {}
+  dispose(): void {
+    this._onDidChangeTreeData.dispose();
+    this.logger.dispose();
+  }
 }

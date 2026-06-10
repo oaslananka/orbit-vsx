@@ -426,16 +426,17 @@
     "format": "prettier --write \"**/*.{json,md,yml,ts,tsx,js,mjs}\"",
     "test": "node ./test/runTests.js",
     "test:unit": "mocha --ui tdd \"test/unit/**/*.test.js\"",
+    "test:compile": "node test/cleanGenerated.mjs && tsc -p test/tsconfig.json",
     "test:package": "pnpm run package && pnpm run smoke:package",
-    "smoke:package": "tsc -p test/tsconfig.json && node ./test/packageSmoke.js",
-    "pretest:unit": "pnpm run build && tsc -p test/tsconfig.json",
+    "smoke:package": "pnpm run test:compile && node ./test/packageSmoke.js",
+    "pretest:unit": "pnpm run build && pnpm run test:compile",
     "precoverage": "pnpm run pretest:unit",
     "coverage": "c8 --config .c8rc.json mocha --ui tdd \"test/unit/**/*.test.js\"",
     "package": "pnpm run build:prod && pnpm exec vsce package --no-dependencies",
     "deploy:marketplace": "pnpm exec vsce publish --no-dependencies",
     "deploy:ovsx": "pnpm exec ovsx publish --no-dependencies",
     "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run coverage && pnpm run build && pnpm test && pnpm run test:package",
-    "pretest": "pnpm run build && tsc -p test/tsconfig.json"
+    "pretest": "pnpm run build && pnpm run test:compile"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -7,8 +7,8 @@ export function registerHealthCommands(
   healthProvider: HealthProvider
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand(COMMAND_IDS.HEALTH_REFRESH, () => {
-      healthProvider.refresh();
+    vscode.commands.registerCommand(COMMAND_IDS.HEALTH_REFRESH, async () => {
+      await healthProvider.refresh();
     })
   );
 
@@ -30,7 +30,7 @@ export function registerHealthCommands(
       try {
         await healthProvider.getClient().registerServer(name, url);
         vscode.window.showInformationMessage(`Server "${name}" registered.`);
-        healthProvider.refresh();
+        await healthProvider.refresh();
       } catch (error) {
         vscode.window.showErrorMessage(
           `Failed to register server: ${error instanceof Error ? error.message : String(error)}`
@@ -56,7 +56,7 @@ export function registerHealthCommands(
       try {
         await healthProvider.getClient().unregisterServer(serverName);
         vscode.window.showInformationMessage(`Server "${serverName}" removed.`);
-        healthProvider.refresh();
+        await healthProvider.refresh();
       } catch (error) {
         vscode.window.showErrorMessage(
           `Failed to remove server: ${error instanceof Error ? error.message : String(error)}`
@@ -69,7 +69,7 @@ export function registerHealthCommands(
     vscode.commands.registerCommand(COMMAND_IDS.HEALTH_CHECK_ALL, async () => {
       try {
         await healthProvider.getClient().checkAll();
-        healthProvider.refresh();
+        await healthProvider.refresh();
         vscode.window.showInformationMessage('Health check completed for all servers.');
       } catch (error) {
         vscode.window.showErrorMessage(

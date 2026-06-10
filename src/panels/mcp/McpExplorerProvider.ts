@@ -77,7 +77,6 @@ export class McpExplorerProvider
         pipelineInfo,
       true
     );
-    md.isTrusted = true;
     item.tooltip = md;
     return item;
   }
@@ -117,7 +116,7 @@ export class McpExplorerProvider
     this._onDidChangeTreeData.fire(undefined);
     try {
       const config = readConfig();
-      if (config.health.enabled) {
+      if (config.mcpExplorer.enabled) {
         const dashboard = await this.client.getDashboard();
         this.servers = dashboard.servers;
       } else {
@@ -137,5 +136,13 @@ export class McpExplorerProvider
     return this.servers.length;
   }
 
-  dispose(): void {}
+  onConfigChanged(): void {
+    this.rebuildClient();
+    void this.refresh();
+  }
+
+  dispose(): void {
+    this._onDidChangeTreeData.dispose();
+    this.logger.dispose();
+  }
 }

@@ -66,5 +66,6 @@ export class DebugDecorationProvider implements vscode.Disposable {
     }
     this.disposables.forEach((d) => d.dispose());
     errorDecorationType.dispose();
+    this.logger.dispose();
   }
 }

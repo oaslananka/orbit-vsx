@@ -10,7 +10,11 @@ suite('Health Monitor Panel', () => {
 
   test('HealthProvider should have refresh method', () => {
     const provider = new HealthProvider({} as vscode.ExtensionContext);
-    const hasRefresh = typeof provider.refresh === 'function';
-    assert.ok(hasRefresh, 'Provider should have refresh method');
+    try {
+      const hasRefresh = typeof provider.refresh === 'function';
+      assert.ok(hasRefresh, 'Provider should have refresh method');
+    } finally {
+      provider.dispose();
+    }
   });
 });
