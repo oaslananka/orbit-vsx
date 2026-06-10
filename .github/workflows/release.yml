@@ -16,37 +16,47 @@ permissions:
 
 jobs:
   release:
+    if: github.repository_owner == 'oaslananka'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          fetch-depth: 0
 
-      - name: Select Node.js 24 and enable pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+
+      - name: Verify release tag
         shell: bash
         run: |
           set -euo pipefail
-          node_dir="$(find /opt/hostedtoolcache/node -path '*/24.*/x64/bin' -type d | sort -V | tail -n 1)"
-          if [ -z "$node_dir" ]; then
-            echo "Node.js 24 was not found in /opt/hostedtoolcache/node" >&2
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Release tag must point to a commit on main"
             exit 1
           fi
-          echo "$node_dir" >> "$GITHUB_PATH"
-          export PATH="$node_dir:$PATH"
-          node --version
+          tag_version="${GITHUB_REF_NAME#v}"
+          pkg_version="$(jq -r '.version' package.json)"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::Git tag version (${tag_version}) does not match package.json version (${pkg_version})"
+            exit 1
+          fi
+          echo "Version check passed: ${tag_version} matches package.json"
+
+      - name: Enable pnpm
+        shell: bash
+        run: |
           corepack enable
           corepack prepare pnpm@11.3.0 --activate
           pnpm --version
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm run typecheck
+      - run: pnpm audit --audit-level moderate
 
-      - run: pnpm run build:prod
-
-      - name: Package VSIX
-        run: pnpm exec vsce package --no-dependencies
-
-      - name: Run packaged extension smoke test
-        run: xvfb-run -a pnpm run smoke:package
+      - name: Run complete verification chain
+        run: xvfb-run -a pnpm run verify
 
       - name: Generate SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610
@@ -71,14 +81,21 @@ jobs:
       - name: Publish to VS Code Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: pnpm exec vsce publish --no-dependencies --packagePath ./*.vsix
+        run: pnpm exec vsce publish --no-dependencies --skip-duplicate --packagePath ./*.vsix
 
       - name: Publish to OpenVSX
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: pnpm exec ovsx publish ./*.vsix --pat "$OVSX_PAT"
+        run: pnpm exec ovsx publish --no-dependencies --skip-duplicate --packagePath ./*.vsix
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" ./*.vsix orbit-vsx.spdx.json SHA256SUMS.txt --generate-notes --verify-tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" ./*.vsix orbit-vsx.spdx.json SHA256SUMS.txt --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" ./*.vsix orbit-vsx.spdx.json SHA256SUMS.txt --generate-notes --verify-tag
+          fi

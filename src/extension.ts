@@ -7,7 +7,6 @@ import { registerHealthCommands } from './commands/health';
 import { registerDebugCommands } from './commands/debug';
 import { registerA2ACommands } from './commands/a2a';
 import { registerMcpCommands } from './commands/mcp';
-import { registerSessionCommands } from './commands/sessions';
 import { McpExplorerProvider } from './panels/mcp/McpExplorerProvider';
 import { DebugDecorationProvider } from './decorations/DebugDecorationProvider';
 import { Logger } from './utils/logger';
@@ -83,15 +82,23 @@ export function activate(context: vscode.ExtensionContext): void {
   a2aProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
   mcpProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
 
-  context.subscriptions.push(healthTree, debugTree, a2aTree, mcpTree);
+  context.subscriptions.push(
+    healthProvider,
+    debugProvider,
+    a2aProvider,
+    mcpProvider,
+    healthTree,
+    debugTree,
+    a2aTree,
+    mcpTree
+  );
 
-  refreshStartupProviders(logger, debugProvider, a2aProvider);
+  refreshStartupProviders(logger, healthProvider, debugProvider, a2aProvider, mcpProvider);
 
   registerHealthCommands(context, healthProvider);
   registerDebugCommands(context, debugProvider);
   registerA2ACommands(context, a2aProvider);
   registerMcpCommands(context, mcpProvider);
-  registerSessionCommands(context);
 
   statusBar.start();
 
@@ -141,10 +148,7 @@ export function activate(context: vscode.ExtensionContext): void {
         });
     };
 
-    context.subscriptions.push(
-      vscode.workspace.onDidSaveTextDocument(validateAgentCard),
-      vscode.workspace.onDidChangeTextDocument((e) => validateAgentCard(e.document))
-    );
+    context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(validateAgentCard));
   }
 
   context.subscriptions.push(
@@ -154,6 +158,7 @@ export function activate(context: vscode.ExtensionContext): void {
         healthProvider.onConfigChanged();
         debugProvider.onConfigChanged();
         a2aProvider.onConfigChanged();
+        mcpProvider.onConfigChanged();
         statusBar.onConfigChanged();
       }
     }),

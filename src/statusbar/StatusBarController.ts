@@ -7,6 +7,7 @@ export class StatusBarController implements vscode.Disposable {
   private item: vscode.StatusBarItem;
   private healthProvider: HealthProvider;
   private pollingTimer: ReturnType<typeof setInterval> | undefined;
+  private updatePromise: Promise<void> | undefined;
 
   constructor(healthProvider: HealthProvider) {
     this.healthProvider = healthProvider;
@@ -16,7 +17,7 @@ export class StatusBarController implements vscode.Disposable {
   }
 
   start(): void {
-    this.update();
+    void this.update();
     this.startPolling();
     this.item.show();
   }
@@ -39,6 +40,21 @@ export class StatusBarController implements vscode.Disposable {
   }
 
   private async update(): Promise<void> {
+    if (this.updatePromise) return this.updatePromise;
+    this.updatePromise = this.performUpdate().finally(() => {
+      this.updatePromise = undefined;
+    });
+    return this.updatePromise;
+  }
+
+  private async performUpdate(): Promise<void> {
+    const config = readConfig();
+    if (!config.health.enabled) {
+      this.item.text = '$(pulse) Orbit';
+      this.item.backgroundColor = undefined;
+      return;
+    }
+
     try {
       const dashboard = await this.healthProvider.getDashboard();
       const { up, total } = dashboard.summary;
@@ -62,7 +78,7 @@ export class StatusBarController implements vscode.Disposable {
 
   onConfigChanged(): void {
     this.startPolling();
-    this.update();
+    void this.update();
   }
 
   dispose(): void {

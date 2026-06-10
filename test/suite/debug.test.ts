@@ -10,8 +10,12 @@ suite('Debug Recorder Panel', () => {
 
   test('DebugProvider should have refresh method', () => {
     const provider = new DebugProvider({} as vscode.ExtensionContext);
-    const hasRefresh = typeof provider.refresh === 'function';
-    assert.ok(hasRefresh, 'Provider should have refresh method');
+    try {
+      const hasRefresh = typeof provider.refresh === 'function';
+      assert.ok(hasRefresh, 'Provider should have refresh method');
+    } finally {
+      provider.dispose();
+    }
   });
 
   test('Debug session types should be valid', () => {

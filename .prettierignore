@@ -1,0 +1,6 @@
+.omo/
+.vscode-test/
+coverage/
+dist/
+node_modules/
+*.vsix

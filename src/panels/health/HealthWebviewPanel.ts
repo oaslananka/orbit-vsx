@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { COMMAND_IDS } from '../../constants';
 import { getNonce, getWebviewUri } from '../../utils/webview';
 import { executeAllowedWebviewCommand, getWebviewClipboardText } from '../../utils/webviewMessages';
+import { escapeHtml, serializeJsonForInlineScript } from '../../utils/escapeHtml';
 import type { McpServer } from './types';
 
 const HEALTH_WEBVIEW_COMMANDS = new Set<string>([
@@ -48,7 +49,7 @@ export function createHealthDetailWebview(
 }
 
 function renderHealthDetailHtml(server: McpServer, scriptUri: vscode.Uri, nonce: string): string {
-  const initialData = JSON.stringify(server);
+  const initialData = serializeJsonForInlineScript(server);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -69,12 +70,4 @@ function renderHealthDetailHtml(server: McpServer, scriptUri: vscode.Uri, nonce:
   <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
 </body>
 </html>`;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

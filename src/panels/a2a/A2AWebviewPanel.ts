@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { COMMAND_IDS } from '../../constants';
 import { getNonce, getWebviewUri } from '../../utils/webview';
 import { executeAllowedWebviewCommand, getWebviewClipboardText } from '../../utils/webviewMessages';
+import { escapeHtml, serializeJsonForInlineScript } from '../../utils/escapeHtml';
 import type { AgentCard } from './types';
 
 const A2A_WEBVIEW_COMMANDS = new Set<string>([
@@ -46,7 +47,7 @@ export function createA2ADetailWebview(context: vscode.ExtensionContext, card: A
 }
 
 function renderA2AShellHtml(card: AgentCard, scriptUri: vscode.Uri, nonce: string): string {
-  const initialData = JSON.stringify(card);
+  const initialData = serializeJsonForInlineScript(card);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -67,12 +68,4 @@ function renderA2AShellHtml(card: AgentCard, scriptUri: vscode.Uri, nonce: strin
   <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
 </body>
 </html>`;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

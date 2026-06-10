@@ -10,8 +10,12 @@ suite('A2A Explorer Panel', () => {
 
   test('A2AProvider should have refresh method', () => {
     const provider = new A2AProvider({} as vscode.ExtensionContext);
-    const hasRefresh = typeof provider.refresh === 'function';
-    assert.ok(hasRefresh, 'Provider should have refresh method');
+    try {
+      const hasRefresh = typeof provider.refresh === 'function';
+      assert.ok(hasRefresh, 'Provider should have refresh method');
+    } finally {
+      provider.dispose();
+    }
   });
 
   test('Agent card types should be valid', () => {

@@ -5,6 +5,22 @@ const os = require("node:os");
 const path = require("node:path");
 const node_child_process_1 = require("node:child_process");
 const electronHostEnv_1 = require("./electronHostEnv");
+const TEST_HOST_TIMEOUT_MS = 180000;
+function stopProcessTree(processId) {
+    if (process.platform === 'win32') {
+        (0, node_child_process_1.spawn)('taskkill', ['/pid', String(processId), '/t', '/f'], {
+            shell: false,
+            stdio: 'ignore',
+        });
+        return;
+    }
+    try {
+        process.kill(processId, 'SIGKILL');
+    }
+    catch {
+        // Process already exited.
+    }
+}
 async function runVSCodeTests(executablePath, args) {
     const child = (0, node_child_process_1.spawn)(executablePath, args, {
         env: (0, electronHostEnv_1.createElectronHostEnv)(process.env),
@@ -13,8 +29,25 @@ async function runVSCodeTests(executablePath, args) {
     child.stdout.on('data', (chunk) => process.stdout.write(chunk));
     child.stderr.on('data', (chunk) => process.stderr.write(chunk));
     return new Promise((resolve, reject) => {
-        child.on('error', reject);
-        child.on('close', (code, signal) => resolve({ code, signal }));
+        let timedOut = false;
+        const timeout = setTimeout(() => {
+            timedOut = true;
+            if (child.pid)
+                stopProcessTree(child.pid);
+        }, TEST_HOST_TIMEOUT_MS);
+        child.on('error', (error) => {
+            clearTimeout(timeout);
+            reject(error);
+        });
+        child.on('close', (code, signal) => {
+            clearTimeout(timeout);
+            if (timedOut) {
+                reject(new Error(`VS Code test host timed out after ${TEST_HOST_TIMEOUT_MS}ms`));
+            }
+            else {
+                resolve({ code, signal });
+            }
+        });
     });
 }
 async function main() {
@@ -45,7 +78,7 @@ async function main() {
     }
     catch (err) {
         process.stderr.write(`Failed to run tests: ${err instanceof Error ? err.message : String(err)}\n`);
-        process.exit(1);
+        process.exitCode = 1;
     }
     finally {
         if (profileRoot) {
@@ -53,4 +86,4 @@ async function main() {
         }
     }
 }
-main();
+void main();

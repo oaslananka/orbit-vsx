@@ -10,6 +10,7 @@ permissions: read-all
 
 jobs:
   scorecard:
+    if: github.repository_owner == 'oaslananka'
     runs-on: ubuntu-latest
     permissions:
       actions: read

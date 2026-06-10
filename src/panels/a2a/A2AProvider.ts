@@ -122,6 +122,10 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
             this.localCards.push(...files.map((f) => f.fsPath));
           }
         }
+      } else {
+        this.entries = [];
+        this.localCards = [];
+        this.registryItem = undefined;
       }
       this._error = undefined;
     } catch (error) {
@@ -147,7 +151,6 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
           `Skills: ${skills.length > 0 ? skills.join(', ') : 'none'}`,
         true
       );
-      md.isTrusted = true;
       item.tooltip = md;
     }
     return item;
@@ -210,9 +213,12 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
 
   onConfigChanged(): void {
     this.rebuildClient();
+    void this.refresh();
   }
 
   dispose(): void {
     this.diagnosticCollection.dispose();
+    this._onDidChangeTreeData.dispose();
+    this.logger.dispose();
   }
 }

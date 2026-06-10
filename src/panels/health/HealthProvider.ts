@@ -46,7 +46,9 @@ export class HealthProvider
 
   private client!: HealthClient;
   private servers: McpServer[] = [];
-  private pollingTimer: ReturnType<typeof setInterval> | undefined;
+  private pollingTimer: ReturnType<typeof setTimeout> | undefined;
+  private pollingGeneration = 0;
+  private refreshPromise: Promise<void> | undefined;
   private logger: Logger;
   private _error: string | undefined;
   private _loading = false;
@@ -67,26 +69,39 @@ export class HealthProvider
     this.stopPolling();
     const config = readConfig();
     if (config.health.enabled) {
-      this.poll();
-      this.pollingTimer = setInterval(
-        () => this.poll(),
-        config.health.pollingIntervalSeconds * 1000
-      );
+      this.schedulePoll(config.health.pollingIntervalSeconds * 1000, this.pollingGeneration);
     }
   }
 
+  private schedulePoll(intervalMs: number, generation: number): void {
+    if (generation !== this.pollingGeneration) return;
+    this.pollingTimer = setTimeout(() => {
+      this.pollingTimer = undefined;
+      void this.refresh().finally(() => {
+        this.schedulePoll(intervalMs, generation);
+      });
+    }, intervalMs);
+  }
+
   private stopPolling(): void {
+    this.pollingGeneration += 1;
     if (this.pollingTimer !== undefined) {
-      clearInterval(this.pollingTimer);
+      clearTimeout(this.pollingTimer);
       this.pollingTimer = undefined;
     }
   }
 
   private async poll(): Promise<void> {
     this._loading = true;
-    this.refresh();
+    this.fireTreeDataChanged();
     try {
       const config = readConfig();
+      if (!config.health.enabled) {
+        this.servers = [];
+        this.previousStatuses.clear();
+        this._error = undefined;
+        return;
+      }
       const servers = await this.client.listServers();
 
       if (config.health.alertOnDown || config.health.alertOnRecover) {
@@ -117,13 +132,18 @@ export class HealthProvider
       }
 
       this.servers = servers;
+      const serverNames = new Set(servers.map((server) => server.name));
+      for (const name of this.previousStatuses.keys()) {
+        if (!serverNames.has(name)) this.previousStatuses.delete(name);
+      }
       this._error = undefined;
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Health poll failed: ${this._error}`);
+    } finally {
+      this._loading = false;
+      this.fireTreeDataChanged();
     }
-    this._loading = false;
-    this.refresh();
   }
 
   getClient(): HealthClient {
@@ -153,7 +173,16 @@ export class HealthProvider
     }
   }
 
-  refresh(): void {
+  refresh(): Promise<void> {
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.poll().finally(() => {
+        this.refreshPromise = undefined;
+      });
+    }
+    return this.refreshPromise;
+  }
+
+  private fireTreeDataChanged(): void {
     this._onDidChangeTreeData.fire(undefined);
   }
 
@@ -179,7 +208,6 @@ export class HealthProvider
         pipelineInfo,
       true
     );
-    md.isTrusted = true;
     item.tooltip = md;
     return item;
   }
@@ -219,9 +247,12 @@ export class HealthProvider
   onConfigChanged(): void {
     this.rebuildClient();
     this.startPolling();
+    void this.refresh();
   }
 
   dispose(): void {
     this.stopPolling();
+    this._onDidChangeTreeData.dispose();
+    this.logger.dispose();
   }
 }
