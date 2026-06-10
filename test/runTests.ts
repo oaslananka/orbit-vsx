@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawn } from 'node:child_process';
+import { createElectronHostEnv } from './electronHostEnv';
 
 interface TestProcessResult {
   code: number | null;
@@ -10,7 +11,7 @@ interface TestProcessResult {
 
 async function runVSCodeTests(executablePath: string, args: string[]): Promise<TestProcessResult> {
   const child = spawn(executablePath, args, {
-    env: process.env,
+    env: createElectronHostEnv(process.env),
     shell: false,
   });
 

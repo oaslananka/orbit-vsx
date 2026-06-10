@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
+import { createElectronHostEnv } from './electronHostEnv';
 
 interface PackageManifest {
   name: string;
@@ -83,7 +84,7 @@ function stopProcessTree(processId: number): void {
 
 async function runVSCode(executablePath: string, args: string[]): Promise<ProcessResult> {
   const child = spawn(executablePath, args, {
-    env: process.env,
+    env: createElectronHostEnv(process.env),
     shell: false,
   });
   child.stdout.on('data', (chunk) => process.stdout.write(chunk));

@@ -4,9 +4,10 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const node_child_process_1 = require("node:child_process");
+const electronHostEnv_1 = require("./electronHostEnv");
 async function runVSCodeTests(executablePath, args) {
     const child = (0, node_child_process_1.spawn)(executablePath, args, {
-        env: process.env,
+        env: (0, electronHostEnv_1.createElectronHostEnv)(process.env),
         shell: false,
     });
     child.stdout.on('data', (chunk) => process.stdout.write(chunk));
