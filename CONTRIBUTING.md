@@ -24,21 +24,18 @@ Run the narrowest relevant command while developing, then run the full set befor
 opening or updating a pull request:
 
 ```powershell
-pnpm run format:check
-pnpm run lint
-pnpm run typecheck
-pnpm run test:unit
-pnpm run coverage
-pnpm test
-pnpm run build
-pnpm run package
+task lint        # ESLint
+task format      # Prettier
+task typecheck   # TypeScript compiler
+task test        # Unit + integration tests
+task build       # esbuild (extension + webviews)
 ```
 
 The repository-level verification shortcut runs all deterministic checks,
 including the packaged extension smoke test:
 
 ```powershell
-pnpm run verify
+task verify
 ```
 
 Remove generated `.vsix` files after package verification unless you are

@@ -12,7 +12,6 @@ esbuild.js
 esbuild-webview.js
 tsconfig.json
 eslint.config.mjs
-.eslintrc.json
 .prettierrc
 pnpm-lock.yaml
 pnpm-workspace.yaml
