@@ -188,8 +188,8 @@
         "command": "orbit.mcp.explorer.refresh",
         "title": "Refresh",
         "category": "Orbit: MCP",
-          "icon": "$(refresh)"
-        }
+        "icon": "$(refresh)"
+      }
     ],
     "menus": {
       "view/title": [
