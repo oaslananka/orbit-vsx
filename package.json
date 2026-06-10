@@ -43,7 +43,7 @@
     "color": "#102033",
     "theme": "dark"
   },
-  "packageManager": "pnpm@11.3.0",
+  "packageManager": "pnpm@11.5.2",
   "activationEvents": [
     "onView:orbit.health",
     "onView:orbit.debug",
