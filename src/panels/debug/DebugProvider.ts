@@ -176,7 +176,5 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
     this.rebuildClient();
   }
 
-  dispose(): void {
-    // no-op
-  }
+  dispose(): void {}
 }

@@ -1,0 +1,34 @@
+version: '3'
+
+tasks:
+  install:
+    cmds:
+      - corepack pnpm install --frozen-lockfile
+
+  lint:
+    cmds:
+      - corepack pnpm run lint
+
+  format:
+    cmds:
+      - corepack pnpm run format
+
+  format-check:
+    cmds:
+      - corepack pnpm run format:check
+
+  test:
+    cmds:
+      - corepack pnpm test
+
+  build:
+    cmds:
+      - corepack pnpm run build
+
+  verify:
+    cmds:
+      - corepack pnpm run verify
+
+  release:
+    cmds:
+      - corepack pnpm run test:package

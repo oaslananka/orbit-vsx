@@ -6,6 +6,9 @@ coverage/
 .codex-checkpoints/
 .vscode-test/
 .DS_Store
+.env
+.env.*
+!.env.example
 
 # Generated JS artifacts (compiled from TypeScript)
 src/**/*.js

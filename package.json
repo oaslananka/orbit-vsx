@@ -2,7 +2,7 @@
   "name": "orbit-vsx",
   "displayName": "Orbit MCP & A2A",
   "description": "Monitor MCP servers, record debug sessions, and explore A2A agents from VS Code.",
-  "version": "0.5.2",
+  "version": "0.5.4",
   "publisher": "oaslananka",
   "license": "Apache-2.0",
   "engines": {
@@ -480,6 +480,7 @@
     "package": "pnpm run build:prod && pnpm exec vsce package --no-dependencies",
     "deploy:marketplace": "pnpm exec vsce publish --no-dependencies",
     "deploy:ovsx": "pnpm exec ovsx publish --no-dependencies",
+    "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run coverage && pnpm run build && pnpm test && pnpm run test:package",
     "pretest": "pnpm run build && tsc -p test/tsconfig.json"
   },
   "dependencies": {

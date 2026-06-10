@@ -83,7 +83,6 @@ function App(): React.ReactElement {
 
   useEffect(() => {
     window.addEventListener('message', handleMessage);
-    // Signal readiness so extension host sends data
     vscode?.postMessage({ type: 'ready' });
     return () => window.removeEventListener('message', handleMessage);
   }, [handleMessage]);

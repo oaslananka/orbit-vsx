@@ -137,7 +137,5 @@ export class McpExplorerProvider
     return this.servers.length;
   }
 
-  dispose(): void {
-    // nothing to dispose
-  }
+  dispose(): void {}
 }

@@ -113,7 +113,6 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
             ? new A2ARegistryItem(config.a2a.registryUrl, this.entries)
             : undefined;
 
-        // Find local agent-card.json files in workspace
         this.localCards = [];
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (workspaceFolders) {
@@ -198,7 +197,6 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
       return element.entries.map((e) => new A2AAgentItem(e));
     }
 
-    // Local Cards folder - return local card items
     if (element.label === 'Local Cards') {
       return this.localCards.map((fp) => new A2ALocalCardItem(fp));
     }

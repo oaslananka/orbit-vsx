@@ -19,10 +19,15 @@ pnpm-workspace.yaml
 .codex-checkpoints/
 .c8rc.json
 coverage/
+AGENTS.md
 CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 SECURITY.md
 RELEASING.md
+.editorconfig
+.env.example
 .gitignore
+.yamllint
 renovate.json
+Taskfile.yml
 *.vsix

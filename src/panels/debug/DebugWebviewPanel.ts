@@ -34,7 +34,6 @@ export function createDebugDetailWebview(
   ]);
   const nonce = getNonce();
 
-  // Render shell immediately, load data async
   panel.webview.html = renderDebugShellHtml(scriptUri, nonce);
 
   panel.webview.onDidReceiveMessage((message: unknown) => {
@@ -48,7 +47,6 @@ export function createDebugDetailWebview(
     }
 
     if (record.type === 'ready') {
-      // Webview is ready — fetch and push session data
       void client
         .getSessionContext(sessionId)
         .then((session: DebugSession) => {

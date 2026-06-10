@@ -162,6 +162,4 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void {
-  // Cleanup handled by context.subscriptions disposables
-}
+export function deactivate(): void {}

@@ -28,6 +28,7 @@ const EXTENSION_ID = 'oaslananka.orbit-vsx';
 const ORBIT_CONTAINER_ID = 'orbit';
 const CORE_VIEW_IDS = ['orbit.health', 'orbit.debug', 'orbit.a2a', 'orbit.mcp.explorer'];
 const EXPECTED_README_SECTIONS = [
+  '## Installation',
   '## Features',
   '### Health Monitor',
   '### Debug Recorder',
@@ -36,7 +37,9 @@ const EXPECTED_README_SECTIONS = [
   '## Quick Start',
   '## Requirements',
   '## Configuration',
+  '## Usage',
   '## Troubleshooting',
+  '## Contributing',
   '## License',
 ];
 const FORBIDDEN_README_CONTENT = ['Publishing (Maintainers)', 'VSCE_PAT', 'OVSX_PAT'];
