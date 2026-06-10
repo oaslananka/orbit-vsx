@@ -36,7 +36,10 @@ export class HealthClient {
     if (response.error) {
       throw new Error(`MCP error: ${response.error.message}`);
     }
-    return response.result as T;
+    if (response.result === undefined) {
+      throw new Error(`MCP error: response result is undefined for method '${method}'`);
+    }
+    return response.result;
   }
 
   async listServers(): Promise<McpServer[]> {
