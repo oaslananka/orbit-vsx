@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
-      - uses: actions/setup-node@1d0ff469b7ec8bddb92d1c6c3b0b0c55c7bf3e0e
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '24'
           cache: 'pnpm'
