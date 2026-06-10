@@ -84,7 +84,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(healthTree, debugTree, a2aTree, mcpTree);
 
-  refreshStartupProviders(logger, debugProvider, a2aProvider);
+  refreshStartupProviders(logger, healthProvider, debugProvider, a2aProvider, mcpProvider);
 
   registerHealthCommands(context, healthProvider);
   registerDebugCommands(context, debugProvider);
