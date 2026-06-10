@@ -60,6 +60,10 @@ export class DebugDecorationProvider implements vscode.Disposable {
   }
 
   dispose(): void {
+    if (this.debounceTimer !== undefined) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = undefined;
+    }
     this.disposables.forEach((d) => d.dispose());
     errorDecorationType.dispose();
   }
