@@ -5,7 +5,6 @@ import type * as A2ACommandsModule from '../../src/commands/a2a';
 import type * as DebugCommandsModule from '../../src/commands/debug';
 import type * as HealthCommandsModule from '../../src/commands/health';
 import type * as McpCommandsModule from '../../src/commands/mcp';
-import type * as SessionCommandsModule from '../../src/commands/sessions';
 
 type CommandCallback = (...args: unknown[]) => unknown;
 type LoadFunction = (request: string, parent: NodeModule | null, isMain: boolean) => unknown;
@@ -83,7 +82,6 @@ let registerA2ACommands: typeof A2ACommandsModule.registerA2ACommands;
 let registerDebugCommands: typeof DebugCommandsModule.registerDebugCommands;
 let registerHealthCommands: typeof HealthCommandsModule.registerHealthCommands;
 let registerMcpCommands: typeof McpCommandsModule.registerMcpCommands;
-let registerSessionCommands: typeof SessionCommandsModule.registerSessionCommands;
 
 function createContext(): ExtensionContext {
   return { subscriptions: [] };
@@ -115,7 +113,6 @@ suite('Command Contracts', () => {
     ({ registerDebugCommands } = await import('../../src/commands/debug'));
     ({ registerHealthCommands } = await import('../../src/commands/health'));
     ({ registerMcpCommands } = await import('../../src/commands/mcp'));
-    ({ registerSessionCommands } = await import('../../src/commands/sessions'));
   });
 
   teardown(() => resetRegistrations());
@@ -134,7 +131,6 @@ suite('Command Contracts', () => {
       context as never,
       { refresh: async (): Promise<void> => undefined } as never
     );
-    registerSessionCommands(context as never);
 
     assert.deepStrictEqual(commandList(), Object.values(COMMAND_IDS).sort());
     assert.strictEqual(context.subscriptions.length, Object.values(COMMAND_IDS).length);
@@ -178,19 +174,16 @@ suite('Command Contracts', () => {
         },
       } as never
     );
-    registerSessionCommands(createContext() as never);
 
     callback(COMMAND_IDS.HEALTH_REFRESH)();
     callback(COMMAND_IDS.DEBUG_REFRESH)();
     callback(COMMAND_IDS.A2A_REFRESH)();
     await callback(COMMAND_IDS.MCP_EXPLORER_REFRESH)();
-    await callback(COMMAND_IDS.SESSIONS_REFRESH)();
 
     assert.strictEqual(healthRefreshes, 1);
     assert.strictEqual(debugRefreshes, 1);
     assert.strictEqual(a2aRefreshes, 1);
     assert.strictEqual(mcpRefreshes, 1);
-    assert.deepStrictEqual(executedCommands, ['workbench.actions.treeView.orbit.sessions.refresh']);
   });
 
   test('Should execute Health command success paths', async () => {
