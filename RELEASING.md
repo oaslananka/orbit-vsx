@@ -16,8 +16,8 @@ must have these secrets configured before a tag is pushed:
 
 The workflow uses Node.js 24 from the GitHub-hosted runner tool cache, enables
 `pnpm@11.3.0` through Corepack, packages the VSIX, runs the packaged extension
-smoke test, publishes to both registries, and creates a GitHub Release with the
-VSIX attached.
+smoke test, generates an SBOM and checksums, attests build provenance, publishes
+to both registries, and creates a GitHub Release with all artifacts attached.
 
 ## Pre-Release Check
 
@@ -59,6 +59,7 @@ gh run watch --exit-status
 ```
 
 5. Verify the GitHub Release has the generated VSIX attached and confirm the
+   SBOM, checksum file, and provenance attestation are available. Confirm the
    Marketplace and Open VSX listings show the new version.
 
 If publishing fails after a tag was pushed, do not retag the same version. Fix

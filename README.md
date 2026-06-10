@@ -5,6 +5,15 @@ into the VS Code Activity Bar. It is built for developers who run companion agen
 services locally or on a private network and want their status, sessions, and
 agent cards visible without leaving the editor.
 
+## Installation
+
+Install Orbit from the VS Code Marketplace, Open VSX, or a GitHub Release
+artifact. To install a downloaded package from the command line:
+
+```powershell
+code --install-extension .\orbit-vsx-0.5.4.vsix
+```
+
 ## Features
 
 ### Health Monitor
@@ -86,7 +95,12 @@ Use VS Code's user settings or workspace settings according to how private your
 endpoint and token values are. Do not commit personal tokens to a shared
 workspace.
 
-## Commands
+## Usage
+
+Open the Orbit Activity Bar view after configuring the companion services. Each
+panel exposes its primary actions from the view title and item context menus.
+
+### Commands
 
 Orbit contributes refresh and action commands for the Health, Debug, A2A, MCP,
 and Sessions views. Most commands are available from the Orbit view title buttons
@@ -132,6 +146,11 @@ Recorder, or add agents to the A2A registry. Also check that the panel's
 
 Install `a2a-warp` or set `orbit.a2a.cliPath` to the executable's absolute path.
 Restart VS Code or refresh A2A Explorer after changing the CLI path.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, verification
+commands, and pull request expectations.
 
 ## License
 

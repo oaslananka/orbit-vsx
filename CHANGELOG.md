@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Advanced the development manifest beyond the latest published release.
+- Added repository-wide verification tooling and contributor setup guidance.
+
+### Fixed
+
+- Isolated VS Code test hosts from inherited Electron Node-mode flags.
+
+### Security
+
+- Added release SBOMs, checksums, and build provenance attestations.
+- Patched the vulnerable transitive `shell-quote` dependency.
+
 ## [0.5.2] - 2026-06-02
 
 ### Fixed
