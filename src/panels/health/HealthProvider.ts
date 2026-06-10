@@ -67,12 +67,16 @@ export class HealthProvider
     this.stopPolling();
     const config = readConfig();
     if (config.health.enabled) {
-      this.poll();
-      this.pollingTimer = setInterval(
-        () => this.poll(),
-        config.health.pollingIntervalSeconds * 1000
-      );
+      this.schedulePoll(config.health.pollingIntervalSeconds * 1000);
     }
+  }
+
+  private schedulePoll(intervalMs: number): void {
+    this.poll().finally(() => {
+      this.pollingTimer = setTimeout(() => {
+        this.schedulePoll(intervalMs);
+      }, intervalMs);
+    });
   }
 
   private stopPolling(): void {
