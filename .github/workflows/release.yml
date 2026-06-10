@@ -20,18 +20,26 @@ jobs:
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
 
-      - name: Select Node.js 24 and enable pnpm
+      - uses: actions/setup-node@1d0ff469b7ec8bddb92d1c6c3b0b0c55c7bf3e0e
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Verify version matches git tag
         shell: bash
         run: |
           set -euo pipefail
-          node_dir="$(find /opt/hostedtoolcache/node -path '*/24.*/x64/bin' -type d | sort -V | tail -n 1)"
-          if [ -z "$node_dir" ]; then
-            echo "Node.js 24 was not found in /opt/hostedtoolcache/node" >&2
+          tag_version="${GITHUB_REF_NAME#v}"
+          pkg_version="$(jq -r '.version' package.json)"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::Git tag version (${tag_version}) does not match package.json version (${pkg_version})"
             exit 1
           fi
-          echo "$node_dir" >> "$GITHUB_PATH"
-          export PATH="$node_dir:$PATH"
-          node --version
+          echo "Version check passed: ${tag_version} matches package.json"
+
+      - name: Enable pnpm
+        shell: bash
+        run: |
           corepack enable
           corepack prepare pnpm@11.3.0 --activate
           pnpm --version
