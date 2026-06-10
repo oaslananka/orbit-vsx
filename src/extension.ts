@@ -7,7 +7,6 @@ import { registerHealthCommands } from './commands/health';
 import { registerDebugCommands } from './commands/debug';
 import { registerA2ACommands } from './commands/a2a';
 import { registerMcpCommands } from './commands/mcp';
-import { registerSessionCommands } from './commands/sessions';
 import { McpExplorerProvider } from './panels/mcp/McpExplorerProvider';
 import { DebugDecorationProvider } from './decorations/DebugDecorationProvider';
 import { Logger } from './utils/logger';
@@ -91,7 +90,6 @@ export function activate(context: vscode.ExtensionContext): void {
   registerDebugCommands(context, debugProvider);
   registerA2ACommands(context, a2aProvider);
   registerMcpCommands(context, mcpProvider);
-  registerSessionCommands(context);
 
   statusBar.start();
 

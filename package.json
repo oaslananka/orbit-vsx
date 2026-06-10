@@ -49,12 +49,10 @@
     "onView:orbit.debug",
     "onView:orbit.a2a",
     "onView:orbit.mcp.explorer",
-    "onView:orbit.sessions",
     "onCommand:orbit.health.refresh",
     "onCommand:orbit.debug.newSession",
     "onCommand:orbit.a2a.validate",
     "onCommand:orbit.mcp.explorer.refresh",
-    "onCommand:orbit.sessions.refresh",
     "onFileSystem:file"
   ],
   "contributes": {
@@ -92,21 +90,6 @@
           "name": "MCP Explorer",
           "icon": "$(plug)",
           "contextualTitle": "MCP Connections"
-        },
-        {
-          "id": "orbit.info",
-          "name": "Info",
-          "icon": "$(info)"
-        },
-        {
-          "id": "orbit.sessions",
-          "name": "Sessions",
-          "icon": "$(server)"
-        },
-        {
-          "id": "orbit.tasks",
-          "name": "Tasks",
-          "icon": "$(checklist)"
         }
       ]
     },
@@ -205,14 +188,8 @@
         "command": "orbit.mcp.explorer.refresh",
         "title": "Refresh",
         "category": "Orbit: MCP",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "orbit.sessions.refresh",
-        "title": "Refresh",
-        "category": "Orbit: Sessions",
-        "icon": "$(refresh)"
-      }
+          "icon": "$(refresh)"
+        }
     ],
     "menus": {
       "view/title": [
@@ -286,14 +263,6 @@
           "group": "navigation",
           "accessibilityInformation": {
             "label": "Refresh MCP connection list"
-          }
-        },
-        {
-          "command": "orbit.sessions.refresh",
-          "when": "view == orbit.sessions",
-          "group": "navigation",
-          "accessibilityInformation": {
-            "label": "Refresh session list"
           }
         }
       ],
@@ -438,21 +407,6 @@
           "type": "boolean",
           "default": true,
           "description": "Enable the MCP Explorer panel."
-        },
-        "orbit.info.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable the Info panel."
-        },
-        "orbit.sessions.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable the Sessions panel."
-        },
-        "orbit.tasks.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable the Tasks panel."
         }
       }
     }
