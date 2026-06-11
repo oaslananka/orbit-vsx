@@ -80,22 +80,29 @@ suite('Orbit Extension', () => {
   });
 
   test('Should register all tree views', () => {
-    const healthView = vscode.window.createTreeView('orbit.health', {
-      treeDataProvider: {} as never,
-    });
-    const debugView = vscode.window.createTreeView('orbit.debug', {
-      treeDataProvider: {} as never,
-    });
-    const a2aView = vscode.window.createTreeView('orbit.a2a', { treeDataProvider: {} as never });
+    const createdViews: vscode.TreeView<unknown>[] = [];
 
     try {
+      const healthView = vscode.window.createTreeView('orbit.health', {
+        treeDataProvider: {} as never,
+      });
+      createdViews.push(healthView);
+
+      const debugView = vscode.window.createTreeView('orbit.debug', {
+        treeDataProvider: {} as never,
+      });
+      createdViews.push(debugView);
+
+      const a2aView = vscode.window.createTreeView('orbit.a2a', {
+        treeDataProvider: {} as never,
+      });
+      createdViews.push(a2aView);
+
       assert.ok(healthView, 'orbit.health view should be creatable');
       assert.ok(debugView, 'orbit.debug view should be creatable');
       assert.ok(a2aView, 'orbit.a2a view should be creatable');
     } finally {
-      healthView.dispose();
-      debugView.dispose();
-      a2aView.dispose();
+      createdViews.forEach((view) => view.dispose());
     }
   });
 

@@ -7,6 +7,7 @@ interface PackageManifest {
 }
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 suite('Test Build Contracts', () => {
   test('Should keep local package manager output out of git status', () => {
@@ -26,7 +27,7 @@ suite('Test Build Contracts', () => {
       '.pre-commit-config.yaml',
       '.prettierignore',
     ].forEach((entry) => {
-      assert.match(vscodeignore, new RegExp(`^${entry.replace('.', '\\.')}$`, 'm'));
+      assert.match(vscodeignore, new RegExp(`^${escapeRegExp(entry)}$`, 'm'));
     });
   });
 
