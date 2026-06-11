@@ -9,6 +9,27 @@ interface PackageManifest {
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
 suite('Test Build Contracts', () => {
+  test('Should keep local package manager output out of git status', () => {
+    const gitignore = fs.readFileSync(path.join(REPO_ROOT, '.gitignore'), 'utf8');
+
+    assert.match(gitignore, /^\.pnpm-store\/$/m);
+  });
+
+  test('Should keep local and maintainer-only files out of the packaged VSIX', () => {
+    const vscodeignore = fs.readFileSync(path.join(REPO_ROOT, '.vscodeignore'), 'utf8');
+
+    [
+      '.commitlintrc.json',
+      '.gitattributes',
+      '.npmrc',
+      '.pnpm-store/',
+      '.pre-commit-config.yaml',
+      '.prettierignore',
+    ].forEach((entry) => {
+      assert.match(vscodeignore, new RegExp(`^${entry.replace('.', '\\.')}$`, 'm'));
+    });
+  });
+
   test('Should compile tests from a clean generated-output state', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')

@@ -2,7 +2,7 @@
   "name": "orbit-vsx",
   "displayName": "Orbit MCP & A2A",
   "description": "Monitor MCP servers, record debug sessions, and explore A2A agents from VS Code.",
-  "version": "0.5.5",
+  "version": "0.5.7",
   "publisher": "oaslananka",
   "license": "Apache-2.0",
   "engines": {

@@ -17,7 +17,9 @@ pnpm-lock.yaml
 pnpm-workspace.yaml
 .codex-checkpoints/
 .c8rc.json
+.commitlintrc.json
 coverage/
+.gitattributes
 AGENTS.md
 CODE_OF_CONDUCT.md
 CONTRIBUTING.md
@@ -26,6 +28,10 @@ RELEASING.md
 .editorconfig
 .env.example
 .gitignore
+.npmrc
+.pnpm-store/
+.pre-commit-config.yaml
+.prettierignore
 .yamllint
 renovate.json
 Taskfile.yml

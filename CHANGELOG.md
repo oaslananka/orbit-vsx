@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-06-11
+
+### Fixed
+
+- Exclude local pnpm store and maintainer-only dotfiles from packaged VSIX artifacts.
+- Add packaged-extension smoke coverage for forbidden local and maintainer-only files.
+- Add repository line-ending attributes so Windows local verification matches CI formatting.
+- Dispose test-created TreeViews in the extension-host suite.
+- Align release documentation and workflow permissions with the current non-attestation release flow.
+
 ## [0.5.5] - 2026-06-11
 
 ### Added

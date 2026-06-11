@@ -14,10 +14,10 @@ must have these secrets configured before a tag is pushed:
 | `VSCE_PAT` | Personal Access Token for `vsce publish` to the VS Code Marketplace. |
 | `OVSX_PAT` | Personal Access Token for `ovsx publish` to Open VSX.                |
 
-The workflow uses Node.js 24 from the GitHub-hosted runner tool cache, enables
-`pnpm@11.3.0` through Corepack, packages the VSIX, runs the packaged extension
-smoke test, generates an SBOM and checksums, attests build provenance, publishes
-to both registries, and creates a GitHub Release with all artifacts attached.
+The workflow uses Node.js 24 via `actions/setup-node`, enables `pnpm@11.3.0`
+through Corepack, runs the full verification chain, generates an SBOM and
+checksums, publishes to both registries, and creates or updates a GitHub Release
+with all artifacts attached.
 
 ## Pre-Release Check
 
@@ -59,8 +59,8 @@ gh run watch --exit-status
 ```
 
 5. Verify the GitHub Release has the generated VSIX attached and confirm the
-   SBOM, checksum file, and provenance attestation are available. Confirm the
-   Marketplace and Open VSX listings show the new version.
+   SBOM and checksum file are available. Confirm the Marketplace and Open VSX
+   listings show the new version.
 
 If publishing fails after a tag was pushed, do not retag the same version. Fix
 the cause, bump to the next patch version when a registry accepted a broken

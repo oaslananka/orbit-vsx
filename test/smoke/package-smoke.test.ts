@@ -43,6 +43,15 @@ const EXPECTED_README_SECTIONS = [
   '## License',
 ];
 const FORBIDDEN_README_CONTENT = ['Publishing (Maintainers)', 'VSCE_PAT', 'OVSX_PAT'];
+const FORBIDDEN_PACKAGE_ENTRIES = [
+  '.commitlintrc.json',
+  '.gitattributes',
+  '.npmrc',
+  '.pnpm-store',
+  '.pre-commit-config.yaml',
+  '.prettierignore',
+  'RELEASING.md',
+];
 const SHOW_EXTENSION_DETAILS_COMMAND = 'workbench.extensions.action.showExtensionsWithIds';
 
 function getOrbitExtension(): vscode.Extension<unknown> {
@@ -113,10 +122,12 @@ suite('Packaged Orbit VSIX', () => {
         `Packaged README should not include ${content}`
       );
     });
-    assert.ok(
-      !fs.existsSync(path.join(extension.extensionPath, 'RELEASING.md')),
-      'Packaged extension should exclude maintainer-only release instructions'
-    );
+    FORBIDDEN_PACKAGE_ENTRIES.forEach((entry) => {
+      assert.ok(
+        !fs.existsSync(path.join(extension.extensionPath, entry)),
+        `Packaged extension should exclude ${entry}`
+      );
+    });
     [manifest.icon, ...manifest.contributes.viewsContainers.activitybar.map(({ icon }) => icon)]
       .filter((asset): asset is string => typeof asset === 'string' && asset.length > 0)
       .forEach((asset) => {

@@ -83,15 +83,20 @@ suite('Orbit Extension', () => {
     const healthView = vscode.window.createTreeView('orbit.health', {
       treeDataProvider: {} as never,
     });
-    assert.ok(healthView, 'orbit.health view should be creatable');
-
     const debugView = vscode.window.createTreeView('orbit.debug', {
       treeDataProvider: {} as never,
     });
-    assert.ok(debugView, 'orbit.debug view should be creatable');
-
     const a2aView = vscode.window.createTreeView('orbit.a2a', { treeDataProvider: {} as never });
-    assert.ok(a2aView, 'orbit.a2a view should be creatable');
+
+    try {
+      assert.ok(healthView, 'orbit.health view should be creatable');
+      assert.ok(debugView, 'orbit.debug view should be creatable');
+      assert.ok(a2aView, 'orbit.a2a view should be creatable');
+    } finally {
+      healthView.dispose();
+      debugView.dispose();
+      a2aView.dispose();
+    }
   });
 
   test('Should refresh startup providers during activation wiring', async () => {
