@@ -6,7 +6,7 @@ overrides:
   '@vscode/vsce>keytar': '-'
   'cheerio>encoding-sniffer': 1.0.2
   'mocha>glob': 13.0.6
-  mocha>diff: 8.0.3
+  mocha>diff: 8.0.4
   mocha>serialize-javascript: 7.0.5
   shell-quote: 1.8.4
   'test-exclude>glob': 13.0.6
