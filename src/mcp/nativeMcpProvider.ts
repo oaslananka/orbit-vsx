@@ -38,11 +38,20 @@ export class OrbitMcpServerDefinitionProvider implements vscode.Disposable {
     const register = runtime.lm?.registerMcpServerDefinitionProvider;
     if (typeof register !== 'function') return;
 
-    this.registration = register(MCP_SERVER_DEFINITION_PROVIDER_ID, {
-      onDidChangeMcpServerDefinitions: this.didChangeEmitter.event,
-      provideMcpServerDefinitions: () => this.provideDefinitions(runtime),
-      resolveMcpServerDefinition: (definition) => definition,
-    });
+    try {
+      this.registration = register(MCP_SERVER_DEFINITION_PROVIDER_ID, {
+        onDidChangeMcpServerDefinitions: this.didChangeEmitter.event,
+        provideMcpServerDefinitions: () => this.provideDefinitions(runtime),
+        resolveMcpServerDefinition: (definition) => definition,
+      });
+    } catch (error) {
+      recordAuditEvent({
+        detail: error instanceof Error ? error.message : String(error),
+        operation: 'register_mcp_definition_provider',
+        outcome: 'blocked',
+        surface: 'mcp',
+      });
+    }
   }
 
   get isRegistered(): boolean {

@@ -302,6 +302,8 @@ suite('Manifest Contracts', () => {
     const source = fs.readFileSync(path.join(REPO_ROOT, 'src/mcp/nativeMcpProvider.ts'), 'utf8');
     const extensionSource = fs.readFileSync(path.join(REPO_ROOT, 'src/extension.ts'), 'utf8');
     assert.ok(source.includes('registerMcpServerDefinitionProvider'));
+    assert.ok(source.includes("operation: 'register_mcp_definition_provider'"));
+    assert.ok(source.includes("outcome: 'blocked'"));
     assert.ok(source.includes('McpHttpServerDefinition'));
     assert.ok(source.includes('MCP_SERVER_DEFINITION_PROVIDER_ID'));
     assert.ok(extensionSource.includes('registerNativeMcpProvider(context)'));
