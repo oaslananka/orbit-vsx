@@ -59,6 +59,8 @@ export const VIEW_ITEM_CONTEXT = {
 
 export const ORBIT_VIEW_CONTAINER_COMMAND = 'workbench.view.extension.orbit';
 
+export const MCP_SERVER_DEFINITION_PROVIDER_ID = 'orbit.mcp.provider';
+
 export const MCP_EXPLORER_LABEL = 'MCP Connections';
 
 export const OUTPUT_CHANNEL_NAME = 'Orbit';

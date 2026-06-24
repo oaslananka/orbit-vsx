@@ -15,6 +15,7 @@ import { readConfig } from './config';
 import { initializeOrbitSecrets, registerSecretCommands } from './secrets';
 import { isWorkspaceTrusted } from './utils/workspaceTrust';
 import { validateAgentCardText } from './panels/a2a/agentCardValidation';
+import { registerNativeMcpProvider } from './mcp/nativeMcpProvider';
 
 interface StartupRefreshProvider {
   refresh(): Promise<void> | void;
@@ -49,6 +50,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const a2aProvider = new A2AProvider(context);
   const mcpProvider = new McpExplorerProvider(healthStore);
   const statusBar = new StatusBarController(healthProvider);
+  const nativeMcpProvider = registerNativeMcpProvider(context);
 
   const healthTree = vscode.window.createTreeView('orbit.health', {
     treeDataProvider: healthProvider,
@@ -110,6 +112,7 @@ export function activate(context: vscode.ExtensionContext): void {
     debugProvider.onConfigChanged();
     mcpProvider.onConfigChanged();
     statusBar.onConfigChanged();
+    nativeMcpProvider.onConfigChanged();
   };
 
   registerSecretCommands(context, refreshSecretBackedClients);
@@ -153,6 +156,7 @@ export function activate(context: vscode.ExtensionContext): void {
       a2aProvider.onConfigChanged();
       mcpProvider.onConfigChanged();
       statusBar.onConfigChanged();
+      nativeMcpProvider.onConfigChanged();
     })
   );
 
@@ -194,6 +198,8 @@ export function activate(context: vscode.ExtensionContext): void {
         a2aProvider.onConfigChanged();
         mcpProvider.onConfigChanged();
         statusBar.onConfigChanged();
+        nativeMcpProvider.onConfigChanged();
+        nativeMcpProvider.onConfigChanged();
       }
     }),
     statusBar,
