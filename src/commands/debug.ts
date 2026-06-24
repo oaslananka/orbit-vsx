@@ -1,19 +1,23 @@
 import * as vscode from 'vscode';
 import type { DebugProvider } from '../panels/debug/DebugProvider';
 import { COMMAND_IDS } from '../constants';
+import { requireWorkspaceTrust } from '../utils/workspaceTrust';
 
 export function registerDebugCommands(
   context: vscode.ExtensionContext,
   debugProvider: DebugProvider
 ): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand(COMMAND_IDS.DEBUG_REFRESH, () => {
+    vscode.commands.registerCommand(COMMAND_IDS.DEBUG_REFRESH, async () => {
+      if (!(await requireWorkspaceTrust('Refreshing Orbit debug sessions'))) return;
       debugProvider.refresh();
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_IDS.DEBUG_NEW_SESSION, async () => {
+      if (!(await requireWorkspaceTrust('Starting a debug recorder session'))) return;
+
       const title = await vscode.window.showInputBox({
         prompt: 'Enter debug session title',
         placeHolder: 'Fix authentication bug',
@@ -34,6 +38,8 @@ export function registerDebugCommands(
 
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_IDS.DEBUG_CLOSE_SESSION, async (item) => {
+      if (!(await requireWorkspaceTrust('Closing a debug recorder session'))) return;
+
       const sessionId = item?.sessionId;
       if (!sessionId) return;
 
@@ -56,6 +62,8 @@ export function registerDebugCommands(
 
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_IDS.DEBUG_SEARCH, async () => {
+      if (!(await requireWorkspaceTrust('Searching debug recorder sessions'))) return;
+
       const query = await vscode.window.showInputBox({
         prompt: 'Search debug sessions',
         placeHolder: 'error message or keyword',
@@ -99,6 +107,8 @@ export function registerDebugCommands(
 
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_IDS.DEBUG_RECORD_COMMAND, async () => {
+      if (!(await requireWorkspaceTrust('Recording a terminal command'))) return;
+
       const clipboardText = await vscode.env.clipboard.readText();
       const command = await vscode.window.showInputBox({
         prompt: 'Record terminal command',

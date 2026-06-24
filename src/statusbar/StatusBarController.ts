@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { readConfig } from '../config';
 import type { HealthProvider } from '../panels/health/HealthProvider';
 import { ORBIT_VIEW_CONTAINER_COMMAND } from '../constants';
+import { isWorkspaceTrusted } from '../utils/workspaceTrust';
 
 export class StatusBarController implements vscode.Disposable {
   private item: vscode.StatusBarItem;
@@ -49,7 +50,7 @@ export class StatusBarController implements vscode.Disposable {
 
   private async performUpdate(): Promise<void> {
     const config = readConfig();
-    if (!config.health.enabled) {
+    if (!config.health.enabled || !isWorkspaceTrusted()) {
       this.item.text = '$(pulse) Orbit';
       this.item.backgroundColor = undefined;
       return;

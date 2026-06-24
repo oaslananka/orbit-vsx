@@ -2,40 +2,57 @@ import * as vscode from 'vscode';
 import { OUTPUT_CHANNEL_NAME } from '../constants';
 
 export class Logger implements vscode.Disposable {
-  private channel: vscode.OutputChannel;
+  private channel: vscode.OutputChannel | undefined;
+  private disposed = false;
 
-  constructor(name: string = OUTPUT_CHANNEL_NAME) {
-    this.channel = vscode.window.createOutputChannel(name);
-  }
+  constructor(private readonly name: string = OUTPUT_CHANNEL_NAME) {}
 
   info(message: string): void {
-    const timestamp = new Date().toISOString();
-    this.channel.appendLine(`[INFO ${timestamp}] ${message}`);
+    this.append('INFO', message);
   }
 
   warn(message: string): void {
-    const timestamp = new Date().toISOString();
-    this.channel.appendLine(`[WARN ${timestamp}] ${message}`);
+    this.append('WARN', message);
   }
 
   error(message: string, error?: unknown): void {
+    const channel = this.getChannel();
+    if (!channel) return;
+
     const timestamp = new Date().toISOString();
-    this.channel.appendLine(`[ERROR ${timestamp}] ${message}`);
+    channel.appendLine(`[ERROR ${timestamp}] ${message}`);
     if (error instanceof Error) {
-      this.channel.appendLine(`  ${error.message}`);
+      channel.appendLine(`  ${error.message}`);
       if (error.stack) {
-        this.channel.appendLine(`  ${error.stack}`);
+        channel.appendLine(`  ${error.stack}`);
       }
     } else if (error !== undefined) {
-      this.channel.appendLine(`  ${String(error)}`);
+      channel.appendLine(`  ${String(error)}`);
     }
   }
 
   show(): void {
-    this.channel.show();
+    this.getChannel()?.show();
   }
 
   dispose(): void {
-    this.channel.dispose();
+    if (this.disposed) return;
+    this.disposed = true;
+    this.channel?.dispose();
+    this.channel = undefined;
+  }
+
+  private append(level: 'INFO' | 'WARN', message: string): void {
+    const channel = this.getChannel();
+    if (!channel) return;
+
+    const timestamp = new Date().toISOString();
+    channel.appendLine(`[${level} ${timestamp}] ${message}`);
+  }
+
+  private getChannel(): vscode.OutputChannel | undefined {
+    if (this.disposed) return undefined;
+    this.channel ??= vscode.window.createOutputChannel(this.name);
+    return this.channel;
   }
 }

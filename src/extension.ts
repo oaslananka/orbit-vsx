@@ -11,6 +11,8 @@ import { McpExplorerProvider } from './panels/mcp/McpExplorerProvider';
 import { DebugDecorationProvider } from './decorations/DebugDecorationProvider';
 import { Logger } from './utils/logger';
 import { readConfig } from './config';
+import { initializeOrbitSecrets, registerSecretCommands } from './secrets';
+import { isWorkspaceTrusted } from './utils/workspaceTrust';
 
 interface StartupRefreshProvider {
   refresh(): Promise<void> | void;
@@ -99,6 +101,21 @@ export function activate(context: vscode.ExtensionContext): void {
   registerDebugCommands(context, debugProvider);
   registerA2ACommands(context, a2aProvider);
   registerMcpCommands(context, mcpProvider);
+  const refreshSecretBackedClients = (): void => {
+    healthProvider.onConfigChanged();
+    debugProvider.onConfigChanged();
+    mcpProvider.onConfigChanged();
+    statusBar.onConfigChanged();
+  };
+
+  registerSecretCommands(context, refreshSecretBackedClients);
+
+  initializeOrbitSecrets(context.secrets)
+    .then(refreshSecretBackedClients)
+    .catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.warn(`Failed to initialize Orbit SecretStorage: ${message}`);
+    });
 
   statusBar.start();
 
@@ -124,9 +141,20 @@ export function activate(context: vscode.ExtensionContext): void {
     );
   }
 
+  context.subscriptions.push(
+    vscode.workspace.onDidGrantWorkspaceTrust(() => {
+      logger.info('Workspace trust granted; refreshing Orbit providers');
+      healthProvider.onConfigChanged();
+      debugProvider.onConfigChanged();
+      a2aProvider.onConfigChanged();
+      mcpProvider.onConfigChanged();
+      statusBar.onConfigChanged();
+    })
+  );
+
   if (config.a2a.autoValidateOnSave) {
     const validateAgentCard = (document: vscode.TextDocument): void => {
-      if (!/agent-card\.json$/.test(document.fileName)) return;
+      if (!/agent-card\.json$/.test(document.fileName) || !isWorkspaceTrusted()) return;
       const uri = document.uri;
       a2aProvider
         .getClient()

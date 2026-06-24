@@ -272,6 +272,42 @@ suite('HTTP and Client Contracts', () => {
     assert.strictEqual(requests[1]?.url, 'https://example.com/agent-card.json');
   });
 
+  test('Should reject unsafe agent-card URLs before network fetch', async () => {
+    const client = new A2AClient('http://127.0.0.1:3099', 'a2a-warp');
+
+    await assert.rejects(() => client.fetchAgentCard('file:///tmp/agent-card.json'), /http/);
+    await assert.rejects(
+      () => client.fetchAgentCard('https://user:pass@example.com/card.json'),
+      /credentials/
+    );
+    await assert.rejects(
+      () => client.fetchAgentCard('http://127.0.0.1:3000/card.json'),
+      /localhost|private/
+    );
+    await assert.rejects(
+      () => client.fetchAgentCard('http://192.168.1.50/card.json'),
+      /localhost|private/
+    );
+  });
+
+  test('Should redact URL credentials and query values in transport errors', async () => {
+    globalThis.fetch = (async (): Promise<Response> => {
+      throw new Error('network down');
+    }) as typeof fetch;
+
+    await assert.rejects(
+      () => getJson('https://user:pass@example.com/agent.json?token=secret'),
+      (error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        assert.match(message, /https:\/\/example.com\/agent.json\?%E2%80%A6/);
+        assert.ok(!message.includes('user'));
+        assert.ok(!message.includes('pass'));
+        assert.ok(!message.includes('secret'));
+        return true;
+      }
+    );
+  });
+
   test('Should convert A2A CLI validation failures into validation errors', async () => {
     const client = new A2AClient('http://127.0.0.1:3099', 'missing-a2a-cli');
 

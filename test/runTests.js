@@ -66,6 +66,7 @@ async function main() {
             '--skip-welcome',
             '--skip-release-notes',
             '--disable-workspace-trust',
+            '--use-inmemory-secretstorage',
             `--user-data-dir=${path.join(profileRoot, 'user-data')}`,
             `--extensions-dir=${path.join(profileRoot, 'extensions')}`,
             `--extensionDevelopmentPath=${extensionDevelopmentPath}`,

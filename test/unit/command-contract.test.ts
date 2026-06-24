@@ -5,12 +5,16 @@ import type * as A2ACommandsModule from '../../src/commands/a2a';
 import type * as DebugCommandsModule from '../../src/commands/debug';
 import type * as HealthCommandsModule from '../../src/commands/health';
 import type * as McpCommandsModule from '../../src/commands/mcp';
+import type * as SecretsModule from '../../src/secrets';
 
 type CommandCallback = (...args: unknown[]) => unknown;
 type LoadFunction = (request: string, parent: NodeModule | null, isMain: boolean) => unknown;
 type ModuleWithLoad = typeof Module & { _load: LoadFunction };
 type Disposable = { dispose(): void };
-type ExtensionContext = { subscriptions: Disposable[] };
+type ExtensionContext = {
+  subscriptions: Disposable[];
+  secrets: { store(key: string, value: string): Promise<void>; delete(key: string): Promise<void> };
+};
 
 const moduleWithLoad = Module as unknown as ModuleWithLoad;
 const originalLoad = moduleWithLoad._load;
@@ -58,6 +62,10 @@ const vscodeMock = {
       readText: async (): Promise<string> => '',
     },
   },
+  workspace: {
+    isTrusted: true,
+    getWorkspaceFolder: (): undefined => undefined,
+  },
   window: {
     showErrorMessage: (message: string): void => {
       errorMessages.push(message);
@@ -82,9 +90,16 @@ let registerA2ACommands: typeof A2ACommandsModule.registerA2ACommands;
 let registerDebugCommands: typeof DebugCommandsModule.registerDebugCommands;
 let registerHealthCommands: typeof HealthCommandsModule.registerHealthCommands;
 let registerMcpCommands: typeof McpCommandsModule.registerMcpCommands;
+let registerSecretCommands: typeof SecretsModule.registerSecretCommands;
 
 function createContext(): ExtensionContext {
-  return { subscriptions: [] };
+  return {
+    subscriptions: [],
+    secrets: {
+      store: async (): Promise<void> => undefined,
+      delete: async (): Promise<void> => undefined,
+    },
+  };
 }
 
 function resetRegistrations(): void {
@@ -113,6 +128,7 @@ suite('Command Contracts', () => {
     ({ registerDebugCommands } = await import('../../src/commands/debug'));
     ({ registerHealthCommands } = await import('../../src/commands/health'));
     ({ registerMcpCommands } = await import('../../src/commands/mcp'));
+    ({ registerSecretCommands } = await import('../../src/secrets'));
   });
 
   teardown(() => resetRegistrations());
@@ -131,6 +147,7 @@ suite('Command Contracts', () => {
       context as never,
       { refresh: async (): Promise<void> => undefined } as never
     );
+    registerSecretCommands(context as never, (): void => undefined);
 
     assert.deepStrictEqual(commandList(), Object.values(COMMAND_IDS).sort());
     assert.strictEqual(context.subscriptions.length, Object.values(COMMAND_IDS).length);

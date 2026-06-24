@@ -1,5 +1,11 @@
 # Orbit MCP & A2A
 
+<p align="center">
+  <a href="https://www.buymeacoffee.com/oaslananka">
+    <img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=%E2%98%95&slug=oaslananka&button_colour=FFDD00&font_colour=000000&font_family=Arial&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" />
+  </a>
+</p>
+
 Orbit brings MCP health monitoring, debug session history, and A2A agent discovery
 into the VS Code Activity Bar. It is built for developers who run companion agent
 services locally or on a private network and want their status, sessions, and
@@ -11,7 +17,7 @@ Install Orbit from the VS Code Marketplace, Open VSX, or a GitHub Release
 artifact. To install a downloaded package from the command line:
 
 ```powershell
-code --install-extension .\orbit-vsx-0.5.4.vsix
+code --install-extension .\orbit-vsx-0.5.7.vsix
 ```
 
 ## Features
@@ -45,8 +51,9 @@ connections as quick-scannable entries.
    - `health-monitor-mcp` for Health Monitor and MCP Explorer.
    - `debug-recorder-mcp` for Debug Recorder.
    - `a2a-warp` plus its registry server for A2A Explorer.
-3. Open `Preferences -> Settings -> Orbit` and set the endpoints, tokens, and CLI
-   path that match your local environment.
+3. Open `Preferences -> Settings -> Orbit` and set the endpoints and CLI
+   path that match your local environment. Store bearer tokens with the
+   `Orbit: Health: Set Health Token` and `Orbit: Debug: Set Debug Token` commands.
 4. Open the Orbit Activity Bar view and use each panel's refresh action to load
    current data.
 
@@ -69,14 +76,14 @@ Panels can be enabled or disabled independently from Orbit settings.
 Open `Preferences -> Settings -> Orbit` for all settings. The most common
 first-run settings are:
 
-| Setting                 | Purpose                                          |
-| ----------------------- | ------------------------------------------------ |
-| `orbit.health.endpoint` | Base URL for `health-monitor-mcp`.               |
-| `orbit.health.token`    | Optional bearer token for `health-monitor-mcp`.  |
-| `orbit.debug.endpoint`  | Base URL for `debug-recorder-mcp`.               |
-| `orbit.debug.token`     | Optional bearer token for `debug-recorder-mcp`.  |
-| `orbit.a2a.registryUrl` | Base URL for the A2A registry server.            |
-| `orbit.a2a.cliPath`     | Executable name or absolute path for `a2a-warp`. |
+| Setting                           | Purpose                                                                         |
+| --------------------------------- | ------------------------------------------------------------------------------- |
+| `orbit.health.endpoint`           | Base URL for `health-monitor-mcp`.                                              |
+| `Orbit: Health: Set Health Token` | Stores the optional `health-monitor-mcp` bearer token in VS Code SecretStorage. |
+| `orbit.debug.endpoint`            | Base URL for `debug-recorder-mcp`.                                              |
+| `Orbit: Debug: Set Debug Token`   | Stores the optional `debug-recorder-mcp` bearer token in VS Code SecretStorage. |
+| `orbit.a2a.registryUrl`           | Base URL for the A2A registry server.                                           |
+| `orbit.a2a.cliPath`               | Executable name or absolute path for `a2a-warp`.                                |
 
 Example workspace settings:
 

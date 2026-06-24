@@ -33,6 +33,28 @@ function findPackagedVsix(): string {
   return vsixPath;
 }
 
+function assertNoPackagedSourceMaps(vsixPath: string): void {
+  const result = spawnSync('unzip', ['-Z1', vsixPath], {
+    encoding: 'utf8',
+    shell: false,
+    timeout: SMOKE_TIMEOUT_MS,
+  });
+  writeOutput(String(result.stdout ?? ''), String(result.stderr ?? ''));
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`Unable to inspect VSIX contents with unzip: ${result.status}`);
+  }
+
+  const sourceMaps = String(result.stdout ?? '')
+    .split(/\r?\n/)
+    .filter((entry) => /^extension\/dist\/.*\.map$/.test(entry));
+  if (sourceMaps.length > 0) {
+    throw new Error(`Packaged VSIX must not contain dist source maps: ${sourceMaps.join(', ')}`);
+  }
+}
+
 function writeOutput(stdout: string, stderr: string): void {
   if (stdout) process.stdout.write(stdout);
   if (stderr) process.stderr.write(stderr);
@@ -180,6 +202,7 @@ function buildLaunchArgs(
     '--skip-welcome',
     '--skip-release-notes',
     '--disable-workspace-trust',
+    '--use-inmemory-secretstorage',
     `--user-data-dir=${path.join(profileRoot, 'user-data')}`,
     `--extensions-dir=${path.join(profileRoot, 'extensions')}`,
     `--extensionDevelopmentPath=${harnessPath}`,
@@ -193,6 +216,7 @@ async function main(): Promise<void> {
     const { downloadAndUnzipVSCode } = await import('@vscode/test-electron');
     const executablePath = await downloadAndUnzipVSCode();
     const vsixPath = findPackagedVsix();
+    assertNoPackagedSourceMaps(vsixPath);
     const extensionTestsPath = path.resolve(__dirname, './smoke/index');
     profileRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-vsix-smoke-'));
     const harnessPath = createSmokeHarness(profileRoot);
