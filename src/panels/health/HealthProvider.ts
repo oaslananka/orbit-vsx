@@ -6,6 +6,7 @@ import type { McpServer, DashboardData } from './types';
 import { Logger } from '../../utils/logger';
 import { createHealthDetailWebview } from './HealthWebviewPanel';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
+import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../../utils/workspaceTrust';
 
 class McpServerItem extends vscode.TreeItem {
   constructor(public readonly server: McpServer) {
@@ -96,6 +97,12 @@ export class HealthProvider
     this.fireTreeDataChanged();
     try {
       const config = readConfig();
+      if (!isWorkspaceTrusted()) {
+        this.servers = [];
+        this.previousStatuses.clear();
+        this._error = WORKSPACE_TRUST_REQUIRED_MESSAGE;
+        return;
+      }
       if (!config.health.enabled) {
         this.servers = [];
         this.previousStatuses.clear();

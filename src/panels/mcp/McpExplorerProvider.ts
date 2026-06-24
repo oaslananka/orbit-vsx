@@ -5,6 +5,7 @@ import type { McpServer } from '../health/types';
 import { readConfig } from '../../config';
 import { Logger } from '../../utils/logger';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
+import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../../utils/workspaceTrust';
 
 class McpConnectionItem extends vscode.TreeItem {
   constructor(public readonly server: McpServer) {
@@ -116,13 +117,18 @@ export class McpExplorerProvider
     this._onDidChangeTreeData.fire(undefined);
     try {
       const config = readConfig();
-      if (config.mcpExplorer.enabled) {
+      if (!isWorkspaceTrusted()) {
+        this.servers = [];
+        this._error = WORKSPACE_TRUST_REQUIRED_MESSAGE;
+      } else if (config.mcpExplorer.enabled) {
         const dashboard = await this.client.getDashboard();
         this.servers = dashboard.servers;
       } else {
         this.servers = [];
       }
-      this._error = undefined;
+      if (isWorkspaceTrusted()) {
+        this._error = undefined;
+      }
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Failed to list MCP connections: ${this._error}`);

@@ -17,6 +17,14 @@ interface ProcessResult {
 const LOG_FILE_LIMIT = 12;
 const LOG_TAIL_LINES = 80;
 const SMOKE_TIMEOUT_MS = 180000;
+
+function getVSCodeDownloadVersion(): string | undefined {
+  const version = process.env.ORBIT_VSCODE_TEST_VERSION?.trim();
+  if (!version || version.toLowerCase() === 'stable') {
+    return undefined;
+  }
+  return version;
+}
 const PACKAGE_JSON_PATH = path.resolve(__dirname, '..', 'package.json');
 const CLI_MODULE_PATH_PARTS = ['resources', 'app', 'out', 'cli.js'];
 
@@ -31,6 +39,28 @@ function findPackagedVsix(): string {
     throw new Error(`Packaged VSIX not found at ${vsixPath}. Run pnpm run package first.`);
   }
   return vsixPath;
+}
+
+function assertNoPackagedSourceMaps(vsixPath: string): void {
+  const result = spawnSync('unzip', ['-Z1', vsixPath], {
+    encoding: 'utf8',
+    shell: false,
+    timeout: SMOKE_TIMEOUT_MS,
+  });
+  writeOutput(String(result.stdout ?? ''), String(result.stderr ?? ''));
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(`Unable to inspect VSIX contents with unzip: ${result.status}`);
+  }
+
+  const sourceMaps = String(result.stdout ?? '')
+    .split(/\r?\n/)
+    .filter((entry) => /^extension\/dist\/.*\.map$/.test(entry));
+  if (sourceMaps.length > 0) {
+    throw new Error(`Packaged VSIX must not contain dist source maps: ${sourceMaps.join(', ')}`);
+  }
 }
 
 function writeOutput(stdout: string, stderr: string): void {
@@ -180,6 +210,7 @@ function buildLaunchArgs(
     '--skip-welcome',
     '--skip-release-notes',
     '--disable-workspace-trust',
+    '--use-inmemory-secretstorage',
     `--user-data-dir=${path.join(profileRoot, 'user-data')}`,
     `--extensions-dir=${path.join(profileRoot, 'extensions')}`,
     `--extensionDevelopmentPath=${harnessPath}`,
@@ -191,8 +222,9 @@ async function main(): Promise<void> {
   let profileRoot = '';
   try {
     const { downloadAndUnzipVSCode } = await import('@vscode/test-electron');
-    const executablePath = await downloadAndUnzipVSCode();
+    const executablePath = await downloadAndUnzipVSCode(getVSCodeDownloadVersion());
     const vsixPath = findPackagedVsix();
+    assertNoPackagedSourceMaps(vsixPath);
     const extensionTestsPath = path.resolve(__dirname, './smoke/index');
     profileRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-vsix-smoke-'));
     const harnessPath = createSmokeHarness(profileRoot);
