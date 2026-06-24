@@ -28,17 +28,3 @@ export interface SessionSearchResult {
   sessions: DebugSession[];
   total: number;
 }
-
-export interface McpJsonRpcRequest {
-  jsonrpc: '2.0';
-  method: string;
-  params?: Record<string, unknown>;
-  id: number;
-}
-
-export interface McpJsonRpcResponse<T = unknown> {
-  jsonrpc: '2.0';
-  result?: T;
-  error?: { code: number; message: string };
-  id: number;
-}

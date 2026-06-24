@@ -12,6 +12,8 @@ interface CapturedRequest {
 }
 
 interface JsonRpcToolCallBody {
+  id?: number;
+  method?: string;
   params: {
     arguments?: Record<string, unknown>;
     name: string;
@@ -32,12 +34,23 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 
 function installJsonFetch(responseBody: unknown, requests: CapturedRequest[] = []): void {
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const body = init?.body ? (JSON.parse(String(init.body)) as JsonRpcToolCallBody) : undefined;
     requests.push({
-      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      body,
       headers: (init?.headers ?? {}) as Record<string, string>,
       method: init?.method ?? 'GET',
       url: String(input),
     });
+
+    if (body?.method === 'tools/call' && typeof body.id === 'number' && isRecord(responseBody)) {
+      const shouldWrap =
+        responseBody.jsonrpc === undefined &&
+        (responseBody.result !== undefined || responseBody.error !== undefined);
+      if (shouldWrap) {
+        return jsonResponse({ jsonrpc: '2.0', ...responseBody, id: body.id });
+      }
+    }
+
     return jsonResponse(responseBody);
   }) as typeof fetch;
 }
@@ -53,12 +66,29 @@ function installJsonRpcFetch(responder: JsonRpcResponder, requests: CapturedRequ
     });
 
     assert.ok(body, 'JSON-RPC request body should be captured');
+    assert.strictEqual(body.method, 'tools/call');
+    assert.strictEqual(typeof body.id, 'number');
     return jsonResponse({
       jsonrpc: '2.0',
       result: responder(body.params.name, body.params.arguments ?? {}),
-      id: 1,
+      id: body.id,
     });
   }) as typeof fetch;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function mcpServer(name = 'local'): Record<string, unknown> {
+  return {
+    lastCheck: '2026-06-02T00:00:00.000Z',
+    latencyMs: 12,
+    name,
+    status: 'up',
+    uptime: 99.5,
+    url: 'http://127.0.0.1:8080',
+  };
 }
 
 function toolCallBody(request: CapturedRequest | undefined): JsonRpcToolCallBody {
@@ -110,10 +140,7 @@ suite('HTTP and Client Contracts', () => {
 
   test('Should map HealthClient MCP calls to JSON-RPC tool calls', async () => {
     const requests: CapturedRequest[] = [];
-    installJsonFetch(
-      { result: { servers: [{ name: 'local', url: 'http://127.0.0.1:8080' }] } },
-      requests
-    );
+    installJsonFetch({ result: { servers: [mcpServer('local')] } }, requests);
     const client = new HealthClient('http://127.0.0.1:3000', 'health-token');
 
     const servers = await client.listServers();
@@ -167,6 +194,18 @@ suite('HTTP and Client Contracts', () => {
     const client = new HealthClient('http://127.0.0.1:3000', '');
 
     await assert.rejects(() => client.listServers(), /health backend failed/);
+  });
+
+  test('Should reject malformed JSON-RPC envelopes and result shapes', async () => {
+    installJsonFetch({ result: { servers: [mcpServer('local')] }, id: 999, jsonrpc: '2.0' });
+    const healthClient = new HealthClient('http://127.0.0.1:3000', '');
+
+    await assert.rejects(() => healthClient.listServers(), /response id did not match/);
+
+    installJsonFetch({ result: { sessions: [{ id: 'missing-fields' }] } });
+    const debugClient = new DebugClient('http://127.0.0.1:3001', '');
+
+    await assert.rejects(() => debugClient.listSessions(), /expected string/);
   });
 
   test('Should map DebugClient commands to JSON-RPC tool calls', async () => {

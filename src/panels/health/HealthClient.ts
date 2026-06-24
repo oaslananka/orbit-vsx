@@ -1,10 +1,21 @@
-import { getJson, postJson } from '../../utils/http';
+import { getJson } from '../../utils/http';
+import {
+  McpJsonRpcClient,
+  asArray,
+  asEnum,
+  asNumber,
+  asRecord,
+  asString,
+} from '../../utils/mcpJsonRpc';
 import { joinUrl, normalizeHttpUrl } from '../../utils/urlSafety';
-import type { DashboardData, McpServer, McpJsonRpcRequest, McpJsonRpcResponse } from './types';
+import type { DashboardData, McpServer, PipelineGroup } from './types';
 
-let nextJsonRpcId = 1;
+const SERVER_STATUS = ['up', 'down', 'degraded'] as const;
+const PIPELINE_STATUS = ['passed', 'failed', 'running', 'unknown'] as const;
 
 export class HealthClient {
+  private readonly mcp: McpJsonRpcClient;
+
   constructor(
     private endpoint: string,
     private token: string
@@ -14,6 +25,7 @@ export class HealthClient {
       allowPrivateNetwork: true,
       label: 'Health endpoint',
     });
+    this.mcp = new McpJsonRpcClient({ endpoint: this.endpoint, headers: () => this.headers });
   }
 
   private get headers(): Record<string, string> {
@@ -30,29 +42,8 @@ export class HealthClient {
     }
   }
 
-  private async mcpCall<T>(method: string, params?: Record<string, unknown>): Promise<T> {
-    const request: McpJsonRpcRequest = {
-      jsonrpc: '2.0',
-      method: 'tools/call',
-      params: { name: method, arguments: params ?? {} },
-      id: nextJsonRpcId++,
-    };
-    const response = await postJson<McpJsonRpcResponse<T>>(
-      joinUrl(this.endpoint, '/mcp'),
-      request,
-      this.headers
-    );
-    if (response.error) {
-      throw new Error(`MCP error: ${response.error.message}`);
-    }
-    if (response.result === undefined) {
-      throw new Error(`MCP error: response result is undefined for method '${method}'`);
-    }
-    return response.result;
-  }
-
   async listServers(): Promise<McpServer[]> {
-    const result = await this.mcpCall<{ servers: McpServer[] }>('list_servers');
+    const result = await this.mcp.toolCall('list_servers', {}, validateListServersResult);
     return result.servers;
   }
 
@@ -62,23 +53,87 @@ export class HealthClient {
       allowPrivateNetwork: true,
       label: 'MCP server URL',
     });
-    await this.mcpCall('register_server', { name, url: safeUrl });
+    await this.mcp.toolCall('register_server', { name, url: safeUrl }, validateVoidResult);
   }
 
   async unregisterServer(name: string): Promise<void> {
-    await this.mcpCall('unregister_server', { name });
+    await this.mcp.toolCall('unregister_server', { name }, validateVoidResult);
   }
 
   async getDashboard(): Promise<DashboardData> {
-    return this.mcpCall<DashboardData>('get_dashboard');
+    return this.mcp.toolCall('get_dashboard', {}, validateDashboardData);
   }
 
   async checkAll(): Promise<void> {
-    await this.mcpCall('check_all');
+    await this.mcp.toolCall('check_all', {}, validateVoidResult);
   }
 
   async getUptime(name: string): Promise<number> {
-    const result = await this.mcpCall<{ uptime: number }>('get_uptime', { name });
+    const result = await this.mcp.toolCall('get_uptime', { name }, validateUptimeResult);
     return result.uptime;
   }
+}
+
+function validateVoidResult(value: unknown, context: string): void {
+  if (value === null) return;
+  asRecord(value, context);
+}
+
+function validateListServersResult(value: unknown, context: string): { servers: McpServer[] } {
+  const record = asRecord(value, context);
+  return {
+    servers: asArray(record.servers, `${context}.servers`).map((item, index) =>
+      validateMcpServer(item, `${context}.servers[${index}]`)
+    ),
+  };
+}
+
+function validateUptimeResult(value: unknown, context: string): { uptime: number } {
+  const record = asRecord(value, context);
+  return { uptime: asNumber(record.uptime, `${context}.uptime`) };
+}
+
+function validateDashboardData(value: unknown, context: string): DashboardData {
+  const record = asRecord(value, context);
+  const summary = asRecord(record.summary, `${context}.summary`);
+  return {
+    servers: asArray(record.servers, `${context}.servers`).map((item, index) =>
+      validateMcpServer(item, `${context}.servers[${index}]`)
+    ),
+    summary: {
+      degraded: asNumber(summary.degraded, `${context}.summary.degraded`),
+      down: asNumber(summary.down, `${context}.summary.down`),
+      total: asNumber(summary.total, `${context}.summary.total`),
+      up: asNumber(summary.up, `${context}.summary.up`),
+    },
+  };
+}
+
+function validateMcpServer(value: unknown, context: string): McpServer {
+  const record = asRecord(value, context);
+  const server: McpServer = {
+    lastCheck: asString(record.lastCheck, `${context}.lastCheck`),
+    latencyMs: asNumber(record.latencyMs, `${context}.latencyMs`),
+    name: asString(record.name, `${context}.name`),
+    status: asEnum(record.status, SERVER_STATUS, `${context}.status`),
+    uptime: asNumber(record.uptime, `${context}.uptime`),
+    url: asString(record.url, `${context}.url`),
+  };
+
+  if (record.pipelineGroups !== undefined) {
+    server.pipelineGroups = asArray(record.pipelineGroups, `${context}.pipelineGroups`).map(
+      (item, index) => validatePipelineGroup(item, `${context}.pipelineGroups[${index}]`)
+    );
+  }
+
+  return server;
+}
+
+function validatePipelineGroup(value: unknown, context: string): PipelineGroup {
+  const record = asRecord(value, context);
+  return {
+    lastRun: asString(record.lastRun, `${context}.lastRun`),
+    name: asString(record.name, `${context}.name`),
+    status: asEnum(record.status, PIPELINE_STATUS, `${context}.status`),
+  };
 }
