@@ -32,9 +32,8 @@ export function registerHealthCommands(
       if (!url) return;
 
       try {
-        await healthProvider.getClient().registerServer(name, url);
+        await healthProvider.registerServer(name, url);
         vscode.window.showInformationMessage(`Server "${name}" registered.`);
-        await healthProvider.refresh();
       } catch (error) {
         vscode.window.showErrorMessage(
           `Failed to register server: ${error instanceof Error ? error.message : String(error)}`
@@ -60,9 +59,8 @@ export function registerHealthCommands(
       if (confirm !== 'Yes') return;
 
       try {
-        await healthProvider.getClient().unregisterServer(serverName);
+        await healthProvider.unregisterServer(serverName);
         vscode.window.showInformationMessage(`Server "${serverName}" removed.`);
-        await healthProvider.refresh();
       } catch (error) {
         vscode.window.showErrorMessage(
           `Failed to remove server: ${error instanceof Error ? error.message : String(error)}`
@@ -76,8 +74,7 @@ export function registerHealthCommands(
       if (!(await requireWorkspaceTrust('Running health checks'))) return;
 
       try {
-        await healthProvider.getClient().checkAll();
-        await healthProvider.refresh();
+        await healthProvider.checkAll();
         vscode.window.showInformationMessage('Health check completed for all servers.');
       } catch (error) {
         vscode.window.showErrorMessage(
