@@ -25,6 +25,8 @@ export interface OrbitConfig {
     cliPath: string;
     enabled: boolean;
     autoValidateOnSave: boolean;
+    localCardScanLimit: number;
+    localCardExcludeGlob: string;
   };
   mcpExplorer: {
     enabled: boolean;
@@ -84,6 +86,14 @@ export function readConfig(): OrbitConfig {
       cliPath: config.get<string>(CONFIG_KEYS.A2A_CLI_PATH, 'a2a-warp'),
       enabled: config.get<boolean>(CONFIG_KEYS.A2A_ENABLED, true),
       autoValidateOnSave: config.get<boolean>(CONFIG_KEYS.A2A_AUTO_VALIDATE, true),
+      localCardScanLimit: Math.max(
+        1,
+        Math.min(config.get<number>(CONFIG_KEYS.A2A_LOCAL_CARD_SCAN_LIMIT, 25), 250)
+      ),
+      localCardExcludeGlob: config.get<string>(
+        CONFIG_KEYS.A2A_LOCAL_CARD_EXCLUDE_GLOB,
+        '**/{node_modules,.git,dist,out,coverage}/**'
+      ),
     },
     mcpExplorer: {
       enabled: config.get<boolean>(CONFIG_KEYS.MCP_EXPLORER_ENABLED, true),

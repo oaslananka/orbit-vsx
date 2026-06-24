@@ -2,6 +2,12 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { getJson } from '../../utils/http';
 import { joinUrl, normalizeHttpUrl } from '../../utils/urlSafety';
+import {
+  resolveAgentCardDiscoveryUrl,
+  validateAgentCardPayload,
+  validateAgentRegistryEntryPayload,
+  validateAgentRegistryPayload,
+} from './agentCardValidation';
 import type { AgentCard, AgentRegistryEntry, ValidationResult } from './types';
 
 const execFileAsync = promisify(execFile);
@@ -22,25 +28,28 @@ export class A2AClient {
     return this.cliPath;
   }
 
+  getAgentCardDiscoveryUrl(input: string): string {
+    return resolveAgentCardDiscoveryUrl(input);
+  }
+
   async listAgents(): Promise<AgentRegistryEntry[]> {
-    return getJson<AgentRegistryEntry[]>(joinUrl(this.registryUrl, '/agents'), undefined, 10000);
+    const payload = await getJson<unknown>(joinUrl(this.registryUrl, '/agents'), undefined, 10000);
+    return validateAgentRegistryPayload(payload);
   }
 
   async getAgent(name: string): Promise<AgentRegistryEntry> {
-    return getJson<AgentRegistryEntry>(
+    const payload = await getJson<unknown>(
       joinUrl(this.registryUrl, `/agents/${encodeURIComponent(name)}`),
       undefined,
       10000
     );
+    return validateAgentRegistryEntryPayload(payload);
   }
 
   async fetchAgentCard(url: string): Promise<AgentCard> {
-    const safeUrl = normalizeHttpUrl(url, {
-      allowLocalhost: false,
-      allowPrivateNetwork: false,
-      label: 'Agent card URL',
-    });
-    return getJson<AgentCard>(safeUrl, undefined, 15000);
+    const safeUrl = resolveAgentCardDiscoveryUrl(url);
+    const payload = await getJson<unknown>(safeUrl, undefined, 15000);
+    return validateAgentCardPayload(payload);
   }
 
   async validateAgentCard(filePath: string, cwd?: string): Promise<ValidationResult> {
