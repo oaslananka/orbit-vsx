@@ -46,6 +46,20 @@ connections as quick-scannable entries. When VS Code exposes its native MCP
 server definition provider API, Orbit also contributes configured Health and
 Debug Recorder MCP endpoints to VS Code's MCP server list.
 
+### Agent Mode tools
+
+Orbit contributes read-only VS Code Language Model Tools for agent workflows:
+
+- `orbit_get_mcp_health`
+- `orbit_list_mcp_servers`
+- `orbit_search_debug_sessions`
+- `orbit_get_debug_session_context`
+- `orbit_list_a2a_agents`
+- `orbit_validate_agent_card`
+
+The tools return bounded JSON text, redact URLs, require Workspace Trust, and
+write security-relevant invocations to the `Orbit:Audit` output channel.
+
 ## Quick Start
 
 1. Install Orbit from the VS Code Marketplace or from a packaged `.vsix`.
