@@ -1,11 +1,20 @@
 import { getJson, postJson } from '../../utils/http';
+import { joinUrl, normalizeHttpUrl } from '../../utils/urlSafety';
 import type { DashboardData, McpServer, McpJsonRpcRequest, McpJsonRpcResponse } from './types';
+
+let nextJsonRpcId = 1;
 
 export class HealthClient {
   constructor(
     private endpoint: string,
     private token: string
-  ) {}
+  ) {
+    this.endpoint = normalizeHttpUrl(endpoint, {
+      allowLocalhost: true,
+      allowPrivateNetwork: true,
+      label: 'Health endpoint',
+    });
+  }
 
   private get headers(): Record<string, string> {
     if (!this.token) return {};
@@ -14,7 +23,7 @@ export class HealthClient {
 
   async checkHealth(): Promise<boolean> {
     try {
-      await getJson(`${this.endpoint}/health`, this.headers, 5000);
+      await getJson(joinUrl(this.endpoint, '/health'), this.headers, 5000);
       return true;
     } catch {
       return false;
@@ -26,10 +35,10 @@ export class HealthClient {
       jsonrpc: '2.0',
       method: 'tools/call',
       params: { name: method, arguments: params ?? {} },
-      id: Date.now(),
+      id: nextJsonRpcId++,
     };
     const response = await postJson<McpJsonRpcResponse<T>>(
-      `${this.endpoint}/mcp`,
+      joinUrl(this.endpoint, '/mcp'),
       request,
       this.headers
     );
@@ -48,7 +57,12 @@ export class HealthClient {
   }
 
   async registerServer(name: string, url: string): Promise<void> {
-    await this.mcpCall('register_server', { name, url });
+    const safeUrl = normalizeHttpUrl(url, {
+      allowLocalhost: true,
+      allowPrivateNetwork: true,
+      label: 'MCP server URL',
+    });
+    await this.mcpCall('register_server', { name, url: safeUrl });
   }
 
   async unregisterServer(name: string): Promise<void> {

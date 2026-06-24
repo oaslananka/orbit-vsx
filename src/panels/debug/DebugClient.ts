@@ -1,4 +1,5 @@
 import { postJson } from '../../utils/http';
+import { joinUrl, normalizeHttpUrl } from '../../utils/urlSafety';
 import type {
   DebugSession,
   SessionSearchResult,
@@ -6,11 +7,19 @@ import type {
   McpJsonRpcResponse,
 } from './types';
 
+let nextJsonRpcId = 1;
+
 export class DebugClient {
   constructor(
     private endpoint: string,
     private token: string
-  ) {}
+  ) {
+    this.endpoint = normalizeHttpUrl(endpoint, {
+      allowLocalhost: true,
+      allowPrivateNetwork: true,
+      label: 'Debug endpoint',
+    });
+  }
 
   private get headers(): Record<string, string> {
     if (!this.token) return {};
@@ -22,10 +31,10 @@ export class DebugClient {
       jsonrpc: '2.0',
       method: 'tools/call',
       params: { name: method, arguments: params ?? {} },
-      id: Date.now(),
+      id: nextJsonRpcId++,
     };
     const response = await postJson<McpJsonRpcResponse<T>>(
-      `${this.endpoint}/mcp`,
+      joinUrl(this.endpoint, '/mcp'),
       request,
       this.headers
     );

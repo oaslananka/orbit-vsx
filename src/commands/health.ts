@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { HealthProvider } from '../panels/health/HealthProvider';
 import { COMMAND_IDS } from '../constants';
+import { requireWorkspaceTrust } from '../utils/workspaceTrust';
 
 export function registerHealthCommands(
   context: vscode.ExtensionContext,
@@ -8,12 +9,15 @@ export function registerHealthCommands(
 ): void {
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_IDS.HEALTH_REFRESH, async () => {
+      if (!(await requireWorkspaceTrust('Refreshing Orbit health data'))) return;
       await healthProvider.refresh();
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_IDS.HEALTH_ADD_SERVER, async () => {
+      if (!(await requireWorkspaceTrust('Registering an MCP server'))) return;
+
       const name = await vscode.window.showInputBox({
         prompt: 'Enter MCP server name',
         placeHolder: 'my-server',
@@ -41,6 +45,8 @@ export function registerHealthCommands(
 
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_IDS.HEALTH_REMOVE_SERVER, async (item) => {
+      if (!(await requireWorkspaceTrust('Removing an MCP server'))) return;
+
       const serverName =
         item?.label ??
         (await vscode.window.showInputBox({
@@ -67,6 +73,8 @@ export function registerHealthCommands(
 
   context.subscriptions.push(
     vscode.commands.registerCommand(COMMAND_IDS.HEALTH_CHECK_ALL, async () => {
+      if (!(await requireWorkspaceTrust('Running health checks'))) return;
+
       try {
         await healthProvider.getClient().checkAll();
         await healthProvider.refresh();

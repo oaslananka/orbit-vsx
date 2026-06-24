@@ -6,6 +6,7 @@ import type { DebugSession } from './types';
 import { Logger } from '../../utils/logger';
 import { createDebugDetailWebview } from './DebugWebviewPanel';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
+import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../../utils/workspaceTrust';
 
 class DebugGroupItem extends vscode.TreeItem {
   constructor(
@@ -83,14 +84,20 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
     this._onDidChangeTreeData.fire(undefined);
     try {
       const config = readConfig();
-      if (config.debug.enabled) {
+      if (!isWorkspaceTrusted()) {
+        this.sessions = [];
+        this.buildGroups();
+        this._error = WORKSPACE_TRUST_REQUIRED_MESSAGE;
+      } else if (config.debug.enabled) {
         this.sessions = await this.client.listSessions();
         this.buildGroups();
       } else {
         this.sessions = [];
         this.buildGroups();
       }
-      this._error = undefined;
+      if (isWorkspaceTrusted()) {
+        this._error = undefined;
+      }
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Failed to list sessions: ${this._error}`);

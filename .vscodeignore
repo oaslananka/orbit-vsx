@@ -8,6 +8,7 @@ node_modules/
 **/*.map
 **/*.ts
 !dist/**
+dist/**/*.map
 esbuild.js
 esbuild-webview.js
 tsconfig.json

@@ -1,3 +1,5 @@
+import { redactUrl } from './urlSafety';
+
 export class HttpError extends Error {
   constructor(
     public readonly statusCode: number,
@@ -17,6 +19,7 @@ export interface FetchOptions {
 
 export async function fetchJson<T = unknown>(url: string, options: FetchOptions = {}): Promise<T> {
   const { method = 'GET', headers = {}, body, timeout = 10000 } = options;
+  const safeUrl = redactUrl(url);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -50,10 +53,10 @@ export async function fetchJson<T = unknown>(url: string, options: FetchOptions 
       throw error;
     }
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error(`Request timed out after ${timeout}ms: ${url}`);
+      throw new Error(`Request timed out after ${timeout}ms: ${safeUrl}`);
     }
     throw new Error(
-      `Request failed: ${url} - ${error instanceof Error ? error.message : String(error)}`
+      `Request failed: ${safeUrl} - ${error instanceof Error ? error.message : String(error)}`
     );
   } finally {
     clearTimeout(timeoutId);

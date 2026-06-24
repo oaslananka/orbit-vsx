@@ -6,6 +6,7 @@ import type { AgentCard, AgentRegistryEntry } from './types';
 import { Logger } from '../../utils/logger';
 import { createA2ADetailWebview } from './A2AWebviewPanel';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
+import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../../utils/workspaceTrust';
 
 class A2ARegistryItem extends vscode.TreeItem {
   constructor(
@@ -106,7 +107,12 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
     this._onDidChangeTreeData.fire(undefined);
     try {
       const config = readConfig();
-      if (config.a2a.enabled) {
+      if (!isWorkspaceTrusted()) {
+        this.entries = [];
+        this.localCards = [];
+        this.registryItem = undefined;
+        this._error = WORKSPACE_TRUST_REQUIRED_MESSAGE;
+      } else if (config.a2a.enabled) {
         this.entries = await this.client.listAgents();
         this.registryItem =
           this.entries.length > 0
@@ -127,7 +133,9 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
         this.localCards = [];
         this.registryItem = undefined;
       }
-      this._error = undefined;
+      if (isWorkspaceTrusted()) {
+        this._error = undefined;
+      }
     } catch (error) {
       this._error = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Failed to list agents: ${this._error}`);

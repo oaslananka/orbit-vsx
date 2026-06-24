@@ -53,7 +53,11 @@
     "onCommand:orbit.debug.newSession",
     "onCommand:orbit.a2a.validate",
     "onCommand:orbit.mcp.explorer.refresh",
-    "onFileSystem:file"
+    "onFileSystem:file",
+    "onCommand:orbit.health.setToken",
+    "onCommand:orbit.health.clearToken",
+    "onCommand:orbit.debug.setToken",
+    "onCommand:orbit.debug.clearToken"
   ],
   "contributes": {
     "viewsContainers": {
@@ -189,6 +193,30 @@
         "title": "Refresh",
         "category": "Orbit: MCP",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "orbit.health.setToken",
+        "title": "Set Health Token",
+        "category": "Orbit: Health",
+        "icon": "$(key)"
+      },
+      {
+        "command": "orbit.health.clearToken",
+        "title": "Clear Health Token",
+        "category": "Orbit: Health",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "orbit.debug.setToken",
+        "title": "Set Debug Token",
+        "category": "Orbit: Debug",
+        "icon": "$(key)"
+      },
+      {
+        "command": "orbit.debug.clearToken",
+        "title": "Clear Debug Token",
+        "category": "Orbit: Debug",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -326,8 +354,9 @@
         "orbit.health.token": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Bearer token for health-monitor-mcp. Store in `settings.json` or use VS Code secrets.",
-          "secret": true
+          "markdownDescription": "Deprecated legacy setting. Use the `Orbit: Health: Set Health Token` command so the bearer token is stored in VS Code SecretStorage.",
+          "secret": true,
+          "deprecationMessage": "Use the Orbit: Health: Set Health Token command. Orbit migrates this value to SecretStorage during activation."
         },
         "orbit.health.pollingIntervalSeconds": {
           "type": "number",
@@ -358,8 +387,9 @@
         "orbit.debug.token": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Bearer token for debug-recorder-mcp.",
-          "secret": true
+          "markdownDescription": "Deprecated legacy setting. Use the `Orbit: Debug: Set Debug Token` command so the bearer token is stored in VS Code SecretStorage.",
+          "secret": true,
+          "deprecationMessage": "Use the Orbit: Debug: Set Debug Token command. Orbit migrates this value to SecretStorage during activation."
         },
         "orbit.debug.enabled": {
           "type": "boolean",
@@ -413,8 +443,8 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm run build:prod",
-    "build": "node esbuild.js && node esbuild-webview.js",
-    "build:prod": "node esbuild.js --production && node esbuild-webview.js --production",
+    "build": "pnpm run clean:dist && node esbuild.js && node esbuild-webview.js",
+    "build:prod": "pnpm run clean:dist && node esbuild.js --production && node esbuild-webview.js --production",
     "watch": "concurrently \"node esbuild.js --watch\" \"node esbuild-webview.js --watch\"",
     "typecheck": "pnpm run typecheck:extension && pnpm run typecheck:webview && pnpm run typecheck:test",
     "typecheck:extension": "tsc --noEmit",
@@ -436,7 +466,9 @@
     "deploy:marketplace": "pnpm exec vsce publish --no-dependencies",
     "deploy:ovsx": "pnpm exec ovsx publish --no-dependencies",
     "verify": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run test:unit && pnpm run coverage && pnpm run build && pnpm test && pnpm run test:package",
-    "pretest": "pnpm run build && pnpm run test:compile"
+    "pretest": "pnpm run build && pnpm run test:compile",
+    "clean:dist": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "verify:headless": "xvfb-run -a pnpm run verify"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -461,5 +493,11 @@
     "ovsx": "^1.0.0",
     "prettier": "^3.8.4",
     "typescript": "^5.8.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Orbit keeps read-only views available in untrusted workspaces, but disables workspace file scans, local CLI validation/scaffolding, and mutating network operations until the workspace is trusted."
+    }
   }
 }
