@@ -6,6 +6,13 @@ const path = require("node:path");
 const node_child_process_1 = require("node:child_process");
 const electronHostEnv_1 = require("./electronHostEnv");
 const TEST_HOST_TIMEOUT_MS = 180000;
+function getVSCodeDownloadVersion() {
+    const version = process.env.ORBIT_VSCODE_TEST_VERSION?.trim();
+    if (!version || version.toLowerCase() === 'stable') {
+        return undefined;
+    }
+    return version;
+}
 function stopProcessTree(processId) {
     if (process.platform === 'win32') {
         (0, node_child_process_1.spawn)('taskkill', ['/pid', String(processId), '/t', '/f'], {
@@ -56,7 +63,7 @@ async function main() {
         const { downloadAndUnzipVSCode } = await Promise.resolve().then(() => require('@vscode/test-electron'));
         const extensionDevelopmentPath = path.resolve(__dirname, '..');
         const extensionTestsPath = path.resolve(__dirname, './suite/index');
-        const executablePath = await downloadAndUnzipVSCode();
+        const executablePath = await downloadAndUnzipVSCode(getVSCodeDownloadVersion());
         profileRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-vscode-test-'));
         const args = [
             '--disable-extensions',

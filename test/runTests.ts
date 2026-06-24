@@ -11,6 +11,14 @@ interface TestProcessResult {
 
 const TEST_HOST_TIMEOUT_MS = 180000;
 
+function getVSCodeDownloadVersion(): string | undefined {
+  const version = process.env.ORBIT_VSCODE_TEST_VERSION?.trim();
+  if (!version || version.toLowerCase() === 'stable') {
+    return undefined;
+  }
+  return version;
+}
+
 function stopProcessTree(processId: number): void {
   if (process.platform === 'win32') {
     spawn('taskkill', ['/pid', String(processId), '/t', '/f'], {
@@ -63,7 +71,7 @@ async function main(): Promise<void> {
 
     const extensionDevelopmentPath = path.resolve(__dirname, '..');
     const extensionTestsPath = path.resolve(__dirname, './suite/index');
-    const executablePath = await downloadAndUnzipVSCode();
+    const executablePath = await downloadAndUnzipVSCode(getVSCodeDownloadVersion());
     profileRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-vscode-test-'));
 
     const args = [

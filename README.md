@@ -154,6 +154,32 @@ Recorder, or add agents to the A2A registry. Also check that the panel's
 Install `a2a-warp` or set `orbit.a2a.cliPath` to the executable's absolute path.
 Restart VS Code or refresh A2A Explorer after changing the CLI path.
 
+## Local verification
+
+Run the same verification chain used by CI:
+
+```bash
+pnpm run verify
+```
+
+For Linux/headless environments, use:
+
+```bash
+pnpm run verify:headless
+```
+
+The VS Code test host can be pinned with `ORBIT_VSCODE_TEST_VERSION`. CI runs
+the minimum supported VS Code API baseline with Node 22 and the current stable
+VS Code build with Node 24:
+
+```bash
+ORBIT_VSCODE_TEST_VERSION=1.100.0 pnpm test
+ORBIT_VSCODE_TEST_VERSION=stable pnpm test
+```
+
+Orbit declares `engines.node >=22.0.0`; Node 22 is the minimum runtime lane and
+Node 24 is the current maintainer lane.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, verification

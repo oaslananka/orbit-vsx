@@ -17,6 +17,14 @@ interface ProcessResult {
 const LOG_FILE_LIMIT = 12;
 const LOG_TAIL_LINES = 80;
 const SMOKE_TIMEOUT_MS = 180000;
+
+function getVSCodeDownloadVersion(): string | undefined {
+  const version = process.env.ORBIT_VSCODE_TEST_VERSION?.trim();
+  if (!version || version.toLowerCase() === 'stable') {
+    return undefined;
+  }
+  return version;
+}
 const PACKAGE_JSON_PATH = path.resolve(__dirname, '..', 'package.json');
 const CLI_MODULE_PATH_PARTS = ['resources', 'app', 'out', 'cli.js'];
 
@@ -214,7 +222,7 @@ async function main(): Promise<void> {
   let profileRoot = '';
   try {
     const { downloadAndUnzipVSCode } = await import('@vscode/test-electron');
-    const executablePath = await downloadAndUnzipVSCode();
+    const executablePath = await downloadAndUnzipVSCode(getVSCodeDownloadVersion());
     const vsixPath = findPackagedVsix();
     assertNoPackagedSourceMaps(vsixPath);
     const extensionTestsPath = path.resolve(__dirname, './smoke/index');
