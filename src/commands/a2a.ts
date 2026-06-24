@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import type { A2AProvider } from '../panels/a2a/A2AProvider';
 import { COMMAND_IDS } from '../constants';
 import { requireWorkspaceTrust } from '../utils/workspaceTrust';
+import { recordAuditEvent } from '../utils/audit';
 
 function getWorkspaceFolderForUri(uri: vscode.Uri): vscode.WorkspaceFolder | undefined {
   return vscode.workspace.getWorkspaceFolder(uri);
@@ -48,7 +49,19 @@ export function registerA2ACommands(
       const filePath = targetUri.fsPath;
       const cwd = getWorkspaceFolderForUri(targetUri)?.uri.fsPath;
       try {
+        recordAuditEvent({
+          surface: 'cli',
+          operation: 'validate_agent_card',
+          outcome: 'started',
+          target: filePath,
+        });
         const result = await a2aProvider.getClient().validateAgentCard(filePath, cwd);
+        recordAuditEvent({
+          surface: 'cli',
+          operation: 'validate_agent_card',
+          outcome: result.valid ? 'success' : 'failure',
+          target: filePath,
+        });
         const diagnostics: vscode.Diagnostic[] = result.errors.map((msg) => {
           const diag = new vscode.Diagnostic(
             new vscode.Range(0, 0, 0, 0),
@@ -71,6 +84,12 @@ export function registerA2ACommands(
           );
         }
       } catch (error) {
+        recordAuditEvent({
+          surface: 'cli',
+          operation: 'validate_agent_card',
+          outcome: 'failure',
+          target: filePath,
+        });
         vscode.window.showErrorMessage(
           `Validation failed: ${error instanceof Error ? error.message : String(error)}`
         );
@@ -89,9 +108,27 @@ export function registerA2ACommands(
       if (!url) return;
 
       try {
+        recordAuditEvent({
+          surface: 'network',
+          operation: 'discover_agent_card',
+          outcome: 'started',
+          target: url,
+        });
         const card = await a2aProvider.getClient().fetchAgentCard(url);
+        recordAuditEvent({
+          surface: 'network',
+          operation: 'discover_agent_card',
+          outcome: 'success',
+          target: url,
+        });
         a2aProvider.openDetailWebviewFromCard(card);
       } catch (error) {
+        recordAuditEvent({
+          surface: 'network',
+          operation: 'discover_agent_card',
+          outcome: 'failure',
+          target: url,
+        });
         vscode.window.showErrorMessage(
           `Failed to discover agent: ${error instanceof Error ? error.message : String(error)}`
         );
@@ -133,6 +170,13 @@ export function registerA2ACommands(
         const { execFile } = await import('node:child_process');
         const { promisify } = await import('node:util');
         const execFileAsync = promisify(execFile);
+        recordAuditEvent({
+          surface: 'cli',
+          operation: 'scaffold_agent',
+          outcome: 'started',
+          target: targetPath,
+          detail: adapter,
+        });
         const output = await execFileAsync(cliPath, ['scaffold', name, '--adapter', adapter], {
           cwd: workspaceFolder.uri.fsPath,
           encoding: 'utf-8',
@@ -145,11 +189,25 @@ export function registerA2ACommands(
           if (output.stderr) channel.appendLine(output.stderr.trimEnd());
           channel.show(true);
         }
+        recordAuditEvent({
+          surface: 'cli',
+          operation: 'scaffold_agent',
+          outcome: 'success',
+          target: targetPath,
+          detail: adapter,
+        });
         vscode.window.showInformationMessage(
           `Agent "${name}" scaffolded in ${workspaceFolder.name}.`
         );
         a2aProvider.refresh();
       } catch (error) {
+        recordAuditEvent({
+          surface: 'cli',
+          operation: 'scaffold_agent',
+          outcome: 'failure',
+          target: targetPath,
+          detail: adapter,
+        });
         vscode.window.showErrorMessage(
           `Scaffold failed: ${error instanceof Error ? error.message : String(error)}`
         );

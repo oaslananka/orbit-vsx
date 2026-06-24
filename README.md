@@ -121,6 +121,14 @@ Common actions:
 - Discover agents, validate an `agent-card.json`, scaffold an agent, and open
   agent cards from A2A Explorer.
 
+## Security model
+
+Orbit treats companion services, workspace files, local CLIs, webviews, and
+discovered Agent Cards as separate trust boundaries. See
+[`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md) for Workspace Trust behavior,
+SecretStorage expectations, runtime validation rules, and the `Orbit:Audit`
+output channel.
+
 ## Troubleshooting
 
 ### A panel shows "Connection error"

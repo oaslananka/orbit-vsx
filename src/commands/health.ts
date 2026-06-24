@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import type { HealthProvider } from '../panels/health/HealthProvider';
 import { COMMAND_IDS } from '../constants';
 import { requireWorkspaceTrust } from '../utils/workspaceTrust';
+import { recordAuditEvent } from '../utils/audit';
 
 export function registerHealthCommands(
   context: vscode.ExtensionContext,
@@ -32,9 +33,27 @@ export function registerHealthCommands(
       if (!url) return;
 
       try {
+        recordAuditEvent({
+          surface: 'mcp',
+          operation: 'register_server',
+          outcome: 'started',
+          target: url,
+        });
         await healthProvider.registerServer(name, url);
+        recordAuditEvent({
+          surface: 'mcp',
+          operation: 'register_server',
+          outcome: 'success',
+          target: url,
+        });
         vscode.window.showInformationMessage(`Server "${name}" registered.`);
       } catch (error) {
+        recordAuditEvent({
+          surface: 'mcp',
+          operation: 'register_server',
+          outcome: 'failure',
+          target: url,
+        });
         vscode.window.showErrorMessage(
           `Failed to register server: ${error instanceof Error ? error.message : String(error)}`
         );
@@ -59,9 +78,27 @@ export function registerHealthCommands(
       if (confirm !== 'Yes') return;
 
       try {
+        recordAuditEvent({
+          surface: 'mcp',
+          operation: 'unregister_server',
+          outcome: 'started',
+          target: String(serverName),
+        });
         await healthProvider.unregisterServer(serverName);
+        recordAuditEvent({
+          surface: 'mcp',
+          operation: 'unregister_server',
+          outcome: 'success',
+          target: String(serverName),
+        });
         vscode.window.showInformationMessage(`Server "${serverName}" removed.`);
       } catch (error) {
+        recordAuditEvent({
+          surface: 'mcp',
+          operation: 'unregister_server',
+          outcome: 'failure',
+          target: String(serverName),
+        });
         vscode.window.showErrorMessage(
           `Failed to remove server: ${error instanceof Error ? error.message : String(error)}`
         );
@@ -74,9 +111,12 @@ export function registerHealthCommands(
       if (!(await requireWorkspaceTrust('Running health checks'))) return;
 
       try {
+        recordAuditEvent({ surface: 'mcp', operation: 'check_all', outcome: 'started' });
         await healthProvider.checkAll();
+        recordAuditEvent({ surface: 'mcp', operation: 'check_all', outcome: 'success' });
         vscode.window.showInformationMessage('Health check completed for all servers.');
       } catch (error) {
+        recordAuditEvent({ surface: 'mcp', operation: 'check_all', outcome: 'failure' });
         vscode.window.showErrorMessage(
           `Health check failed: ${error instanceof Error ? error.message : String(error)}`
         );

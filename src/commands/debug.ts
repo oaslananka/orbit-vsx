@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import type { DebugProvider } from '../panels/debug/DebugProvider';
 import { COMMAND_IDS } from '../constants';
 import { requireWorkspaceTrust } from '../utils/workspaceTrust';
+import { recordAuditEvent } from '../utils/audit';
 
 export function registerDebugCommands(
   context: vscode.ExtensionContext,
@@ -25,10 +26,25 @@ export function registerDebugCommands(
       if (!title) return;
 
       try {
+        recordAuditEvent({
+          surface: 'debug',
+          operation: 'start_debug_session',
+          outcome: 'started',
+        });
         await debugProvider.getClient().startDebugSession(title);
+        recordAuditEvent({
+          surface: 'debug',
+          operation: 'start_debug_session',
+          outcome: 'success',
+        });
         vscode.window.showInformationMessage(`Debug session "${title}" started.`);
         debugProvider.refresh();
       } catch (error) {
+        recordAuditEvent({
+          surface: 'debug',
+          operation: 'start_debug_session',
+          outcome: 'failure',
+        });
         vscode.window.showErrorMessage(
           `Failed to start session: ${error instanceof Error ? error.message : String(error)}`
         );
@@ -49,10 +65,28 @@ export function registerDebugCommands(
       if (confirm !== 'Yes') return;
 
       try {
+        recordAuditEvent({
+          surface: 'debug',
+          operation: 'close_debug_session',
+          outcome: 'started',
+          target: sessionId,
+        });
         await debugProvider.getClient().closeSession(sessionId);
+        recordAuditEvent({
+          surface: 'debug',
+          operation: 'close_debug_session',
+          outcome: 'success',
+          target: sessionId,
+        });
         vscode.window.showInformationMessage('Session closed.');
         debugProvider.refresh();
       } catch (error) {
+        recordAuditEvent({
+          surface: 'debug',
+          operation: 'close_debug_session',
+          outcome: 'failure',
+          target: sessionId,
+        });
         vscode.window.showErrorMessage(
           `Failed to close session: ${error instanceof Error ? error.message : String(error)}`
         );
@@ -124,9 +158,27 @@ export function registerDebugCommands(
       if (!sessionId) return;
 
       try {
+        recordAuditEvent({
+          surface: 'debug',
+          operation: 'record_command',
+          outcome: 'started',
+          target: sessionId,
+        });
         await debugProvider.getClient().recordCommand(sessionId, command);
+        recordAuditEvent({
+          surface: 'debug',
+          operation: 'record_command',
+          outcome: 'success',
+          target: sessionId,
+        });
         vscode.window.showInformationMessage('Command recorded.');
       } catch (error) {
+        recordAuditEvent({
+          surface: 'debug',
+          operation: 'record_command',
+          outcome: 'failure',
+          target: sessionId,
+        });
         vscode.window.showErrorMessage(
           `Failed to record command: ${error instanceof Error ? error.message : String(error)}`
         );

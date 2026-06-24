@@ -11,6 +11,11 @@ patch release for a still-installed Marketplace or Open VSX version.
 | 0.5.x   | Yes       |
 | < 0.5   | No        |
 
+## Runtime Security Model
+
+Orbit's runtime trust boundaries, MCP/A2A validation policy, and local audit log
+are documented in [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md).
+
 ## Reporting a Vulnerability
 
 Do not open a public issue with exploit details, credentials, tokens, private
