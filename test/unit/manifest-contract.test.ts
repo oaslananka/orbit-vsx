@@ -291,4 +291,19 @@ suite('Manifest Contracts', () => {
       assert.ok(fs.existsSync(path.join(REPO_ROOT, file)), `${id} view file exists at ${file}`);
     });
   });
+
+  test('Should contribute and register the native MCP server definition provider', () => {
+    const packageJson = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8')) as {
+      contributes?: { mcpServerDefinitionProviders?: Array<{ id: string; label: string }> };
+    };
+    const providers = packageJson.contributes?.mcpServerDefinitionProviders ?? [];
+    assert.deepStrictEqual(providers, [{ id: 'orbit.mcp.provider', label: 'Orbit MCP Servers' }]);
+
+    const source = fs.readFileSync(path.join(REPO_ROOT, 'src/mcp/nativeMcpProvider.ts'), 'utf8');
+    const extensionSource = fs.readFileSync(path.join(REPO_ROOT, 'src/extension.ts'), 'utf8');
+    assert.ok(source.includes('registerMcpServerDefinitionProvider'));
+    assert.ok(source.includes('McpHttpServerDefinition'));
+    assert.ok(source.includes('MCP_SERVER_DEFINITION_PROVIDER_ID'));
+    assert.ok(extensionSource.includes('registerNativeMcpProvider(context)'));
+  });
 });

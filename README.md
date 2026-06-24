@@ -42,7 +42,9 @@ save, and scaffold agents through the configured `a2a-warp` CLI.
 
 Review MCP connection status in a dedicated tree view. MCP Explorer reads the
 same `health-monitor-mcp` dashboard data as Health Monitor and presents the
-connections as quick-scannable entries.
+connections as quick-scannable entries. When VS Code exposes its native MCP
+server definition provider API, Orbit also contributes configured Health and
+Debug Recorder MCP endpoints to VS Code's MCP server list.
 
 ## Quick Start
 

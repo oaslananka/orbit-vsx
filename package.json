@@ -451,7 +451,13 @@
           "description": "Enable the MCP Explorer panel."
         }
       }
-    }
+    },
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "orbit.mcp.provider",
+        "label": "Orbit MCP Servers"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "pnpm run build:prod",
