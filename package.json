@@ -433,6 +433,18 @@
           "default": true,
           "description": "Auto-validate agent-card.json files on save."
         },
+        "orbit.a2a.localCardScanLimit": {
+          "type": "number",
+          "default": 25,
+          "minimum": 1,
+          "maximum": 250,
+          "description": "Maximum number of local agent-card.json files scanned per workspace folder."
+        },
+        "orbit.a2a.localCardExcludeGlob": {
+          "type": "string",
+          "default": "**/{node_modules,.git,dist,out,coverage}/**",
+          "description": "Glob used to exclude folders from local A2A agent-card scanning."
+        },
         "orbit.mcp.explorer.enabled": {
           "type": "boolean",
           "default": true,

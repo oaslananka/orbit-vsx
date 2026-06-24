@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../../config';
 import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants';
-import { A2AClient } from './A2AClient';
-import type { AgentCard, AgentRegistryEntry } from './types';
-import { Logger } from '../../utils/logger';
-import { createA2ADetailWebview } from './A2AWebviewPanel';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
 import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../../utils/workspaceTrust';
+import { Logger } from '../../utils/logger';
+import { validateAgentCardText } from './agentCardValidation';
+import { A2AClient } from './A2AClient';
+import { createA2ADetailWebview } from './A2AWebviewPanel';
+import type { AgentCard, AgentRegistryEntry, LocalAgentCard, ValidationResult } from './types';
 
 class A2ARegistryItem extends vscode.TreeItem {
   constructor(
@@ -36,9 +37,9 @@ class A2AAgentItem extends vscode.TreeItem {
     this.iconPath = entry.online
       ? new vscode.ThemeIcon('circuit-board')
       : new vscode.ThemeIcon('circuit-board', new vscode.ThemeColor('charts.red'));
-    this.description = entry.online ? '' : '(offline)';
+    this.description = entry.online ? 'valid' : 'offline';
     this.tooltip = new vscode.MarkdownString(
-      `**${card.name}** v${card.version}\n\n${card.description}\n\nOnline: ${entry.online}`
+      `**${card.name}** v${card.version}\n\n${card.description}\n\nOnline: ${entry.online}\nValidation: valid`
     );
     this.contextValue = VIEW_ITEM_CONTEXT.A2A_AGENT;
   }
@@ -49,12 +50,17 @@ class A2AAgentItem extends vscode.TreeItem {
 }
 
 class A2ALocalCardItem extends vscode.TreeItem {
-  constructor(filePath: string) {
-    super(filePath, vscode.TreeItemCollapsibleState.None);
-    this.id = `a2a-local:${filePath}`;
-    this.iconPath = new vscode.ThemeIcon('file');
-    this.description = 'local card';
-    this.tooltip = new vscode.MarkdownString(`**Local Agent Card**\n\n\`${filePath}\``);
+  constructor(public readonly localCard: LocalAgentCard) {
+    super(localCard.filePath, vscode.TreeItemCollapsibleState.None);
+    this.id = `a2a-local:${localCard.filePath}`;
+    this.iconPath = localCard.validation.valid
+      ? new vscode.ThemeIcon('file-code', new vscode.ThemeColor('charts.green'))
+      : new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
+    this.description = localCard.validation.valid ? 'valid local card' : 'invalid local card';
+    const errors = localCard.validation.errors.slice(0, 8).join('\n');
+    this.tooltip = new vscode.MarkdownString(
+      `**Local Agent Card**\n\n\`${localCard.filePath}\`\n\nValidation: ${localCard.validation.valid ? 'valid' : 'invalid'}${errors ? `\n\nErrors:\n${errors}` : ''}`
+    );
     this.contextValue = 'a2aLocalCard';
   }
 }
@@ -65,7 +71,7 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
 
   private client!: A2AClient;
   private entries: AgentRegistryEntry[] = [];
-  private localCards: string[] = [];
+  private localCards: LocalAgentCard[] = [];
   private registryItem: A2ARegistryItem | undefined;
   private diagnosticCollection: vscode.DiagnosticCollection;
   private logger: Logger;
@@ -118,16 +124,10 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
           this.entries.length > 0
             ? new A2ARegistryItem(config.a2a.registryUrl, this.entries)
             : undefined;
-
-        this.localCards = [];
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (workspaceFolders) {
-          for (const folder of workspaceFolders) {
-            const pattern = new vscode.RelativePattern(folder, '**/agent-card.json');
-            const files = await vscode.workspace.findFiles(pattern, '**/node_modules/**', 10);
-            this.localCards.push(...files.map((f) => f.fsPath));
-          }
-        }
+        this.localCards = await this.scanLocalCards(
+          config.a2a.localCardScanLimit,
+          config.a2a.localCardExcludeGlob
+        );
       } else {
         this.entries = [];
         this.localCards = [];
@@ -152,11 +152,15 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
     if (item instanceof A2AAgentItem) {
       const card = item.entry.card;
       const skills = card.skills ?? [];
+      const skillNames = skills.map((skill) => skill.name).join(', ');
       const md = new vscode.MarkdownString(
         `**${card.name}** v${card.version}  \n` +
           `${card.description}  \n` +
           `Online: \`${item.entry.online}\`  \n` +
-          `Skills: ${skills.length > 0 ? skills.join(', ') : 'none'}`,
+          `Interfaces: ${card.supportedInterfaces.map((agentInterface) => agentInterface.protocolBinding).join(', ')}  \n` +
+          `Input: ${card.defaultInputModes.join(', ')}  \n` +
+          `Output: ${card.defaultOutputModes.join(', ')}  \n` +
+          `Skills: ${skillNames.length > 0 ? skillNames : 'none'}`,
         true
       );
       item.tooltip = md;
@@ -188,7 +192,11 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
           'Local Cards',
           vscode.TreeItemCollapsibleState.Collapsed
         );
-        localItem.iconPath = new vscode.ThemeIcon('folder');
+        const invalidCount = this.localCards.filter((card) => !card.validation.valid).length;
+        localItem.iconPath =
+          invalidCount > 0 ? new vscode.ThemeIcon('warning') : new vscode.ThemeIcon('folder');
+        localItem.description =
+          invalidCount > 0 ? `${invalidCount} invalid` : `${this.localCards.length} valid`;
         items.push(localItem);
       }
       if (items.length === 0) {
@@ -209,7 +217,7 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
     }
 
     if (element.label === 'Local Cards') {
-      return this.localCards.map((fp) => new A2ALocalCardItem(fp));
+      return this.localCards.map((localCard) => new A2ALocalCardItem(localCard));
     }
 
     return [];
@@ -229,4 +237,70 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
     this._onDidChangeTreeData.dispose();
     this.logger.dispose();
   }
+
+  private async scanLocalCards(scanLimit: number, excludeGlob: string): Promise<LocalAgentCard[]> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) return [];
+
+    const localCards: LocalAgentCard[] = [];
+    for (const folder of workspaceFolders) {
+      const pattern = new vscode.RelativePattern(folder, '**/agent-card.json');
+      const files = await vscode.workspace.findFiles(pattern, excludeGlob, scanLimit);
+      for (const file of files) {
+        localCards.push(await this.validateLocalCard(file));
+      }
+    }
+    return localCards;
+  }
+
+  private async validateLocalCard(uri: vscode.Uri): Promise<LocalAgentCard> {
+    try {
+      const bytes = await vscode.workspace.fs.readFile(uri);
+      const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+      const validation = validateAgentCardText(text);
+      this.updateLocalDiagnostics(uri, text, validation);
+      return { filePath: uri.fsPath, validation };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const validation: ValidationResult = { errors: [message], valid: false };
+      this.updateLocalDiagnostics(uri, '', validation);
+      return { filePath: uri.fsPath, validation };
+    }
+  }
+
+  private updateLocalDiagnostics(
+    uri: vscode.Uri,
+    text: string,
+    validation: ValidationResult
+  ): void {
+    if (validation.valid) {
+      this.diagnosticCollection.delete(uri);
+      return;
+    }
+    const diagnostics = validation.errors.map((message) => {
+      const range = createDiagnosticRange(text, message);
+      const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
+      diagnostic.source = 'Orbit A2A';
+      return diagnostic;
+    });
+    this.diagnosticCollection.set(uri, diagnostics);
+  }
+}
+
+function createDiagnosticRange(text: string, message: string): vscode.Range {
+  const keyMatch = /\.([A-Za-z][A-Za-z0-9_-]*)(?:\[|:|\.|$)/.exec(message);
+  if (keyMatch) {
+    const key = keyMatch[1];
+    const index = text.indexOf(`"${key}"`);
+    if (index >= 0) return positionRangeAtOffset(text, index, key.length + 2);
+  }
+  return new vscode.Range(0, 0, 0, 1);
+}
+
+function positionRangeAtOffset(text: string, offset: number, length: number): vscode.Range {
+  const prefix = text.slice(0, offset);
+  const line = prefix.split('\n').length - 1;
+  const lineStart = prefix.lastIndexOf('\n') + 1;
+  const character = offset - lineStart;
+  return new vscode.Range(line, character, line, character + length);
 }

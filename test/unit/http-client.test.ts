@@ -96,6 +96,32 @@ function toolCallBody(request: CapturedRequest | undefined): JsonRpcToolCallBody
   return request.body as JsonRpcToolCallBody;
 }
 
+function agentCard(name = 'agent-a'): Record<string, unknown> {
+  return {
+    capabilities: { pushNotifications: false, streaming: true },
+    defaultInputModes: ['application/json'],
+    defaultOutputModes: ['application/json'],
+    description: 'desc',
+    name,
+    skills: [
+      {
+        description: 'Skill desc',
+        id: 'skill-1',
+        name: 'Skill One',
+        tags: ['test'],
+      },
+    ],
+    supportedInterfaces: [
+      {
+        protocolBinding: 'jsonrpc',
+        protocolVersion: '1.0',
+        url: `https://${name}.example.com/a2a`,
+      },
+    ],
+    version: '1.0.0',
+  };
+}
+
 function debugSession(id = 'session-1'): Record<string, unknown> {
   return {
     createdAt: '2026-06-02T00:00:00.000Z',
@@ -267,7 +293,7 @@ suite('HTTP and Client Contracts', () => {
     const requests: CapturedRequest[] = [];
     installJsonFetch(
       {
-        card: { description: 'desc', name: 'agent-a', skills: [], version: '1.0.0' },
+        card: agentCard('agent-a'),
         lastSeen: '2026-06-02T00:00:00.000Z',
         online: true,
       },
@@ -287,7 +313,7 @@ suite('HTTP and Client Contracts', () => {
     installJsonFetch(
       [
         {
-          card: { description: 'desc', name: 'agent-a', skills: [], version: '1.0.0' },
+          card: agentCard('agent-a'),
           lastSeen: '2026-06-02T00:00:00.000Z',
           online: true,
         },
@@ -301,14 +327,15 @@ suite('HTTP and Client Contracts', () => {
     assert.strictEqual(agents[0]?.card.name, 'agent-a');
     assert.strictEqual(requests[0]?.url, 'http://127.0.0.1:3099/agents');
 
-    installJsonFetch(
-      { description: 'desc', name: 'agent-b', skills: [], version: '1.0.0' },
-      requests
-    );
+    installJsonFetch(agentCard('agent-b'), requests);
     const card = await client.fetchAgentCard('https://example.com/agent-card.json');
 
     assert.strictEqual(card.name, 'agent-b');
     assert.strictEqual(requests[1]?.url, 'https://example.com/agent-card.json');
+    assert.strictEqual(
+      client.getAgentCardDiscoveryUrl('https://agent.example.com'),
+      'https://agent.example.com/.well-known/agent-card.json'
+    );
   });
 
   test('Should reject unsafe agent-card URLs before network fetch', async () => {

@@ -14,6 +14,7 @@ import { Logger } from './utils/logger';
 import { readConfig } from './config';
 import { initializeOrbitSecrets, registerSecretCommands } from './secrets';
 import { isWorkspaceTrusted } from './utils/workspaceTrust';
+import { validateAgentCardText } from './panels/a2a/agentCardValidation';
 
 interface StartupRefreshProvider {
   refresh(): Promise<void> | void;
@@ -163,9 +164,11 @@ export function activate(context: vscode.ExtensionContext): void {
         .getClient()
         .validateAgentCard(uri.fsPath)
         .then((result) => {
-          const diagnostics: vscode.Diagnostic[] = result.errors.map((msg) => {
+          const schemaResult = validateAgentCardText(document.getText());
+          const errors = [...schemaResult.errors, ...result.errors];
+          const diagnostics: vscode.Diagnostic[] = errors.map((msg) => {
             const diag = new vscode.Diagnostic(
-              new vscode.Range(0, 0, 0, document.lineCount - 1),
+              new vscode.Range(0, 0, Math.max(document.lineCount - 1, 0), 1),
               msg,
               vscode.DiagnosticSeverity.Error
             );
