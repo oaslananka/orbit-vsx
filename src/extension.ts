@@ -16,6 +16,7 @@ import { initializeOrbitSecrets, registerSecretCommands } from './secrets';
 import { isWorkspaceTrusted } from './utils/workspaceTrust';
 import { validateAgentCardText } from './panels/a2a/agentCardValidation';
 import { registerNativeMcpProvider } from './mcp/nativeMcpProvider';
+import { registerOrbitLanguageModelTools } from './lm/orbitTools';
 
 interface StartupRefreshProvider {
   refresh(): Promise<void> | void;
@@ -107,6 +108,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerDebugCommands(context, debugProvider);
   registerA2ACommands(context, a2aProvider);
   registerMcpCommands(context, mcpProvider);
+  registerOrbitLanguageModelTools(context, { a2aProvider, debugProvider, healthProvider });
   const refreshSecretBackedClients = (): void => {
     healthProvider.onConfigChanged();
     debugProvider.onConfigChanged();

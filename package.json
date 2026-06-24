@@ -457,6 +457,179 @@
         "id": "orbit.mcp.provider",
         "label": "Orbit MCP Servers"
       }
+    ],
+    "languageModelTools": [
+      {
+        "name": "orbit_get_mcp_health",
+        "tags": [
+          "orbit",
+          "mcp",
+          "health"
+        ],
+        "toolReferenceName": "orbitMcpHealth",
+        "displayName": "Orbit MCP Health",
+        "modelDescription": "Returns Orbit MCP health dashboard summary and redacted server status. Read-only and bounded.",
+        "userDescription": "Read Orbit MCP health summary.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(pulse)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "refresh": {
+              "type": "boolean",
+              "default": true,
+              "description": "Refresh before returning."
+            }
+          }
+        }
+      },
+      {
+        "name": "orbit_list_mcp_servers",
+        "tags": [
+          "orbit",
+          "mcp",
+          "servers"
+        ],
+        "toolReferenceName": "orbitMcpServers",
+        "displayName": "Orbit MCP Servers",
+        "modelDescription": "Lists configured MCP servers with status, uptime, latency, and redacted URLs. Read-only and bounded.",
+        "userDescription": "List Orbit MCP servers.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(server)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 25,
+              "default": 10,
+              "description": "Maximum records to return; capped at 25."
+            },
+            "includePipelines": {
+              "type": "boolean",
+              "default": false,
+              "description": "Include pipeline summaries."
+            }
+          }
+        }
+      },
+      {
+        "name": "orbit_search_debug_sessions",
+        "tags": [
+          "orbit",
+          "debug",
+          "search"
+        ],
+        "toolReferenceName": "orbitDebugSearch",
+        "displayName": "Orbit Debug Search",
+        "modelDescription": "Searches Orbit Debug Recorder sessions and returns bounded summaries. Read-only.",
+        "userDescription": "Search Orbit debug sessions.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(debug-alt)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search query."
+            },
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 25,
+              "default": 10,
+              "description": "Maximum records to return; capped at 25."
+            }
+          }
+        }
+      },
+      {
+        "name": "orbit_get_debug_session_context",
+        "tags": [
+          "orbit",
+          "debug",
+          "context"
+        ],
+        "toolReferenceName": "orbitDebugContext",
+        "displayName": "Orbit Debug Context",
+        "modelDescription": "Returns bounded context for one Orbit Debug Recorder session. Read-only.",
+        "userDescription": "Read one debug session context.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(debug-console)",
+        "inputSchema": {
+          "type": "object",
+          "required": [
+            "sessionId"
+          ],
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Debug session id."
+            }
+          }
+        }
+      },
+      {
+        "name": "orbit_list_a2a_agents",
+        "tags": [
+          "orbit",
+          "a2a",
+          "agents"
+        ],
+        "toolReferenceName": "orbitA2AAgents",
+        "displayName": "Orbit A2A Agents",
+        "modelDescription": "Lists A2A agents from the configured registry with validated bounded summaries. Read-only.",
+        "userDescription": "List A2A agents.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(circuit-board)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 25,
+              "default": 10,
+              "description": "Maximum records to return; capped at 25."
+            }
+          }
+        }
+      },
+      {
+        "name": "orbit_validate_agent_card",
+        "tags": [
+          "orbit",
+          "a2a",
+          "validation"
+        ],
+        "toolReferenceName": "orbitA2ACardValidate",
+        "displayName": "Orbit A2A Card Validate",
+        "modelDescription": "Validates an A2A Agent Card from JSON text or a safe public HTTPS URL. Provide exactly one of cardJson or url. Read-only.",
+        "userDescription": "Validate an A2A Agent Card.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(verified)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "cardJson": {
+              "type": "string",
+              "minLength": 2,
+              "description": "Agent Card JSON text."
+            },
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Agent Card URL."
+            }
+          }
+        }
+      }
     ]
   },
   "scripts": {
