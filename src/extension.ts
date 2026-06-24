@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { HealthProvider } from './panels/health/HealthProvider';
+import { HealthStore } from './panels/health/HealthStore';
 import { DebugProvider } from './panels/debug/DebugProvider';
 import { A2AProvider } from './panels/a2a/A2AProvider';
 import { StatusBarController } from './statusbar/StatusBarController';
@@ -41,10 +42,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const config = readConfig();
 
-  const healthProvider = new HealthProvider(context);
+  const healthStore = new HealthStore();
+  const healthProvider = new HealthProvider(context, healthStore);
   const debugProvider = new DebugProvider(context);
   const a2aProvider = new A2AProvider(context);
-  const mcpProvider = new McpExplorerProvider();
+  const mcpProvider = new McpExplorerProvider(healthStore);
   const statusBar = new StatusBarController(healthProvider);
 
   const healthTree = vscode.window.createTreeView('orbit.health', {
@@ -85,6 +87,7 @@ export function activate(context: vscode.ExtensionContext): void {
   mcpProvider.onDidChangeTreeData(() => guard(updateViewDescriptions));
 
   context.subscriptions.push(
+    healthStore,
     healthProvider,
     debugProvider,
     a2aProvider,

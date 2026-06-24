@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../../config';
 import { COMMAND_IDS, ORBIT_VIEW_CONTAINER_COMMAND, VIEW_ITEM_CONTEXT } from '../../constants';
-import { HealthClient } from './HealthClient';
-import type { McpServer, DashboardData } from './types';
-import { Logger } from '../../utils/logger';
-import { createHealthDetailWebview } from './HealthWebviewPanel';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
-import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../../utils/workspaceTrust';
+import { createHealthDetailWebview } from './HealthWebviewPanel';
+import { HealthStore, type HealthState } from './HealthStore';
+import type { DashboardData, McpServer } from './types';
 
 class McpServerItem extends vscode.TreeItem {
   constructor(public readonly server: McpServer) {
@@ -40,157 +38,62 @@ class McpServerItem extends vscode.TreeItem {
 export class HealthProvider
   implements vscode.TreeDataProvider<McpServerItem | vscode.TreeItem>, vscode.Disposable
 {
-  private _onDidChangeTreeData = new vscode.EventEmitter<
+  private readonly _onDidChangeTreeData = new vscode.EventEmitter<
     McpServerItem | vscode.TreeItem | undefined
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  private client!: HealthClient;
-  private servers: McpServer[] = [];
-  private pollingTimer: ReturnType<typeof setTimeout> | undefined;
-  private pollingGeneration = 0;
-  private refreshPromise: Promise<void> | undefined;
-  private logger: Logger;
-  private _error: string | undefined;
-  private _loading = false;
+  private readonly store: HealthStore;
+  private readonly storeSubscription: vscode.Disposable;
+  private readonly ownsStore: boolean;
   private previousStatuses = new Map<string, string>();
 
-  constructor(private context: vscode.ExtensionContext) {
-    this.logger = new Logger('Orbit:Health');
-    this.rebuildClient();
-    this.startPolling();
+  constructor(
+    private context: vscode.ExtensionContext,
+    store?: HealthStore
+  ) {
+    this.store = store ?? new HealthStore();
+    this.ownsStore = store === undefined;
+    this.storeSubscription = this.store.onDidChangeState((state) =>
+      this.onStoreStateChanged(state)
+    );
   }
 
-  private rebuildClient(): void {
-    const config = readConfig();
-    this.client = new HealthClient(config.health.endpoint, config.health.token);
+  getState(): HealthState {
+    return this.store.getState();
   }
 
-  private startPolling(): void {
-    this.stopPolling();
-    const config = readConfig();
-    if (config.health.enabled) {
-      this.schedulePoll(config.health.pollingIntervalSeconds * 1000, this.pollingGeneration);
-    }
+  getClient(): ReturnType<HealthStore['getClient']> {
+    return this.store.getClient();
   }
 
-  private schedulePoll(intervalMs: number, generation: number): void {
-    if (generation !== this.pollingGeneration) return;
-    this.pollingTimer = setTimeout(() => {
-      this.pollingTimer = undefined;
-      void this.refresh().finally(() => {
-        this.schedulePoll(intervalMs, generation);
-      });
-    }, intervalMs);
-  }
-
-  private stopPolling(): void {
-    this.pollingGeneration += 1;
-    if (this.pollingTimer !== undefined) {
-      clearTimeout(this.pollingTimer);
-      this.pollingTimer = undefined;
-    }
-  }
-
-  private async poll(): Promise<void> {
-    this._loading = true;
-    this.fireTreeDataChanged();
-    try {
-      const config = readConfig();
-      if (!isWorkspaceTrusted()) {
-        this.servers = [];
-        this.previousStatuses.clear();
-        this._error = WORKSPACE_TRUST_REQUIRED_MESSAGE;
-        return;
-      }
-      if (!config.health.enabled) {
-        this.servers = [];
-        this.previousStatuses.clear();
-        this._error = undefined;
-        return;
-      }
-      const servers = await this.client.listServers();
-
-      if (config.health.alertOnDown || config.health.alertOnRecover) {
-        for (const server of servers) {
-          const prev = this.previousStatuses.get(server.name);
-          if (config.health.alertOnDown && prev === 'up' && server.status === 'down') {
-            void vscode.window
-              .showWarningMessage(
-                `$(error) ${server.name} is DOWN`,
-                'Open Health Monitor',
-                'Dismiss'
-              )
-              .then((selection) => {
-                if (selection === 'Open Health Monitor') {
-                  void vscode.commands.executeCommand(ORBIT_VIEW_CONTAINER_COMMAND);
-                }
-              });
-          }
-          if (config.health.alertOnRecover && prev === 'down' && server.status === 'up') {
-            void vscode.window.showInformationMessage(`$(check) ${server.name} is back UP`);
-          }
-          this.previousStatuses.set(server.name, server.status);
-        }
-      } else {
-        for (const server of servers) {
-          this.previousStatuses.set(server.name, server.status);
-        }
-      }
-
-      this.servers = servers;
-      const serverNames = new Set(servers.map((server) => server.name));
-      for (const name of this.previousStatuses.keys()) {
-        if (!serverNames.has(name)) this.previousStatuses.delete(name);
-      }
-      this._error = undefined;
-    } catch (error) {
-      this._error = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`Health poll failed: ${this._error}`);
-    } finally {
-      this._loading = false;
-      this.fireTreeDataChanged();
-    }
-  }
-
-  getClient(): HealthClient {
-    return this.client;
-  }
-
-  getDashboard(): Promise<DashboardData> {
-    return this.client.getDashboard();
+  async getDashboard(): Promise<DashboardData> {
+    const state = this.store.getState();
+    if (!state.loading && state.lastUpdated !== undefined) return state.dashboard;
+    return (await this.store.refresh()).dashboard;
   }
 
   registerServer(name: string, url: string): Promise<void> {
-    return this.client.registerServer(name, url);
+    return this.store.registerServer(name, url);
   }
 
   unregisterServer(name: string): Promise<void> {
-    return this.client.unregisterServer(name);
+    return this.store.unregisterServer(name);
   }
 
   checkAll(): Promise<void> {
-    return this.client.checkAll();
+    return this.store.checkAll();
   }
 
   openDetailWebview(serverName: string): void {
-    const server = this.servers.find((s) => s.name === serverName);
+    const server = this.store.getState().servers.find((s) => s.name === serverName);
     if (server) {
       createHealthDetailWebview(this.context, server);
     }
   }
 
   refresh(): Promise<void> {
-    if (!this.refreshPromise) {
-      this.refreshPromise = this.poll().finally(() => {
-        this.refreshPromise = undefined;
-      });
-    }
-    return this.refreshPromise;
-  }
-
-  private fireTreeDataChanged(): void {
-    this._onDidChangeTreeData.fire(undefined);
+    return this.store.refresh().then(() => undefined);
   }
 
   getTreeItem(element: McpServerItem | vscode.TreeItem): vscode.TreeItem {
@@ -220,22 +123,23 @@ export class HealthProvider
   }
 
   getChildren(): (McpServerItem | vscode.TreeItem)[] {
-    if (this._loading) {
+    const state = this.store.getState();
+    if (state.loading) {
       const loadingItem = new vscode.TreeItem('Loading…', vscode.TreeItemCollapsibleState.None);
       loadingItem.iconPath = new vscode.ThemeIcon('loading~spin');
       return [loadingItem];
     }
-    if (this._error) {
+    if (state.error) {
       const errItem = new vscode.TreeItem(
         '⚠ Connection error',
         vscode.TreeItemCollapsibleState.None
       );
-      errItem.description = this._error;
-      errItem.tooltip = this._error;
+      errItem.description = state.error;
+      errItem.tooltip = state.error;
       errItem.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
       return [errItem];
     }
-    if (this.servers.length === 0) {
+    if (state.servers.length === 0) {
       return createTreeEmptyState({
         icon: 'pulse',
         title: 'No servers connected',
@@ -244,22 +148,58 @@ export class HealthProvider
         actionCommand: COMMAND_IDS.HEALTH_ADD_SERVER,
       });
     }
-    return this.servers.map((s) => new McpServerItem(s));
+    return state.servers.map((s) => new McpServerItem(s));
   }
 
   getCount(): number {
-    return this.servers.length;
+    return this.store.getState().servers.length;
   }
 
   onConfigChanged(): void {
-    this.rebuildClient();
-    this.startPolling();
-    void this.refresh();
+    this.store.onConfigChanged();
   }
 
   dispose(): void {
-    this.stopPolling();
+    this.storeSubscription.dispose();
+    if (this.ownsStore) this.store.dispose();
     this._onDidChangeTreeData.dispose();
-    this.logger.dispose();
+  }
+
+  private onStoreStateChanged(state: HealthState): void {
+    if (!state.loading && !state.error) {
+      this.updateStatusNotifications(state.servers);
+    }
+    this._onDidChangeTreeData.fire(undefined);
+  }
+
+  private updateStatusNotifications(servers: McpServer[]): void {
+    const config = readConfig();
+    if (config.health.alertOnDown || config.health.alertOnRecover) {
+      for (const server of servers) {
+        const prev = this.previousStatuses.get(server.name);
+        if (config.health.alertOnDown && prev === 'up' && server.status === 'down') {
+          void vscode.window
+            .showWarningMessage(`$(error) ${server.name} is DOWN`, 'Open Health Monitor', 'Dismiss')
+            .then((selection) => {
+              if (selection === 'Open Health Monitor') {
+                void vscode.commands.executeCommand(ORBIT_VIEW_CONTAINER_COMMAND);
+              }
+            });
+        }
+        if (config.health.alertOnRecover && prev === 'down' && server.status === 'up') {
+          void vscode.window.showInformationMessage(`$(check) ${server.name} is back UP`);
+        }
+        this.previousStatuses.set(server.name, server.status);
+      }
+    } else {
+      for (const server of servers) {
+        this.previousStatuses.set(server.name, server.status);
+      }
+    }
+
+    const serverNames = new Set(servers.map((server) => server.name));
+    for (const name of this.previousStatuses.keys()) {
+      if (!serverNames.has(name)) this.previousStatuses.delete(name);
+    }
   }
 }

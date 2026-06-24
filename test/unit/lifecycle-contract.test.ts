@@ -14,7 +14,7 @@ suite('Extension Lifecycle Contracts', () => {
 
     assert.match(
       source,
-      /context\.subscriptions\.push\(\s*healthProvider,\s*debugProvider,\s*a2aProvider,\s*mcpProvider,/
+      /context\.subscriptions\.push\(\s*healthStore,\s*healthProvider,\s*debugProvider,\s*a2aProvider,\s*mcpProvider,/
     );
   });
 
@@ -26,11 +26,24 @@ suite('Extension Lifecycle Contracts', () => {
   });
 
   test('Should keep health polling cancellable and non-overlapping', () => {
-    const source = readSource('src/panels/health/HealthProvider.ts');
+    const source = readSource('src/panels/health/HealthStore.ts');
 
     assert.ok(source.includes('private pollingGeneration = 0'));
-    assert.ok(source.includes('private refreshPromise: Promise<void> | undefined'));
+    assert.ok(source.includes('private refreshPromise: Promise<HealthState> | undefined'));
     assert.ok(source.includes('generation !== this.pollingGeneration'));
     assert.ok(!source.includes('setInterval('));
+  });
+
+  test('Should route health consumers through the shared HealthStore', () => {
+    const extensionSource = readSource('src/extension.ts');
+    const statusBarSource = readSource('src/statusbar/StatusBarController.ts');
+    const mcpExplorerSource = readSource('src/panels/mcp/McpExplorerProvider.ts');
+
+    assert.ok(extensionSource.includes('const healthStore = new HealthStore()'));
+    assert.ok(extensionSource.includes('new HealthProvider(context, healthStore)'));
+    assert.ok(extensionSource.includes('new McpExplorerProvider(healthStore)'));
+    assert.ok(!statusBarSource.includes('setInterval('));
+    assert.ok(!statusBarSource.includes('getDashboard()'));
+    assert.ok(!mcpExplorerSource.includes('new HealthClient('));
   });
 });

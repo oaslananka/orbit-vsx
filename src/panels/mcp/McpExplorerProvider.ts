@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
-import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants';
-import { HealthClient } from '../health/HealthClient';
-import type { McpServer } from '../health/types';
 import { readConfig } from '../../config';
-import { Logger } from '../../utils/logger';
+import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
-import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../../utils/workspaceTrust';
+import type { HealthStore } from '../health/HealthStore';
+import type { McpServer } from '../health/types';
 
 class McpConnectionItem extends vscode.TreeItem {
   constructor(public readonly server: McpServer) {
@@ -35,25 +33,15 @@ class McpConnectionItem extends vscode.TreeItem {
 export class McpExplorerProvider
   implements vscode.TreeDataProvider<McpConnectionItem | vscode.TreeItem>, vscode.Disposable
 {
-  private _onDidChangeTreeData = new vscode.EventEmitter<
+  private readonly _onDidChangeTreeData = new vscode.EventEmitter<
     McpConnectionItem | vscode.TreeItem | undefined
   >();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  private client!: HealthClient;
-  private servers: McpServer[] = [];
-  private logger: Logger;
-  private _error: string | undefined;
-  private _loading = false;
+  private readonly storeSubscription: vscode.Disposable;
 
-  constructor() {
-    this.logger = new Logger('Orbit:MCP');
-    this.rebuildClient();
-  }
-
-  private rebuildClient(): void {
-    const config = readConfig();
-    this.client = new HealthClient(config.health.endpoint, config.health.token);
+  constructor(private readonly healthStore: HealthStore) {
+    this.storeSubscription = this.healthStore.onDidChangeState(() => this.fireTreeDataChanged());
   }
 
   getTreeItem(element: McpConnectionItem | vscode.TreeItem): vscode.TreeItem {
@@ -82,25 +70,25 @@ export class McpExplorerProvider
     return item;
   }
 
-  getChildren():
-    | (McpConnectionItem | vscode.TreeItem)[]
-    | Promise<(McpConnectionItem | vscode.TreeItem)[]> {
-    if (this._loading) {
+  getChildren(): (McpConnectionItem | vscode.TreeItem)[] {
+    const config = readConfig();
+    const state = this.healthStore.getState();
+    if (state.loading) {
       const loadingItem = new vscode.TreeItem('Loading…', vscode.TreeItemCollapsibleState.None);
       loadingItem.iconPath = new vscode.ThemeIcon('loading~spin');
       return [loadingItem];
     }
-    if (this._error) {
+    if (state.error) {
       const errItem = new vscode.TreeItem(
         '⚠ Connection error',
         vscode.TreeItemCollapsibleState.None
       );
-      errItem.description = this._error;
-      errItem.tooltip = this._error;
+      errItem.description = state.error;
+      errItem.tooltip = state.error;
       errItem.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
       return [errItem];
     }
-    if (this.servers.length === 0) {
+    if (!config.mcpExplorer.enabled || state.servers.length === 0) {
       return createTreeEmptyState({
         icon: 'plug',
         title: 'No MCP connections',
@@ -109,46 +97,32 @@ export class McpExplorerProvider
         actionCommand: COMMAND_IDS.HEALTH_ADD_SERVER,
       });
     }
-    return this.servers.map((s) => new McpConnectionItem(s));
+    return state.servers.map((s) => new McpConnectionItem(s));
   }
 
   async refresh(): Promise<void> {
-    this._loading = true;
-    this._onDidChangeTreeData.fire(undefined);
-    try {
-      const config = readConfig();
-      if (!isWorkspaceTrusted()) {
-        this.servers = [];
-        this._error = WORKSPACE_TRUST_REQUIRED_MESSAGE;
-      } else if (config.mcpExplorer.enabled) {
-        const dashboard = await this.client.getDashboard();
-        this.servers = dashboard.servers;
-      } else {
-        this.servers = [];
-      }
-      if (isWorkspaceTrusted()) {
-        this._error = undefined;
-      }
-    } catch (error) {
-      this._error = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`Failed to list MCP connections: ${this._error}`);
-      this.servers = [];
+    if (readConfig().mcpExplorer.enabled) {
+      await this.healthStore.refresh();
+    } else {
+      this.fireTreeDataChanged();
     }
-    this._loading = false;
-    this._onDidChangeTreeData.fire(undefined);
   }
 
   getCount(): number {
-    return this.servers.length;
+    if (!readConfig().mcpExplorer.enabled) return 0;
+    return this.healthStore.getState().servers.length;
   }
 
   onConfigChanged(): void {
-    this.rebuildClient();
     void this.refresh();
   }
 
   dispose(): void {
+    this.storeSubscription.dispose();
     this._onDidChangeTreeData.dispose();
-    this.logger.dispose();
+  }
+
+  private fireTreeDataChanged(): void {
+    this._onDidChangeTreeData.fire(undefined);
   }
 }

@@ -207,17 +207,15 @@ suite('Command Contracts', () => {
     const calls: string[] = [];
     let refreshes = 0;
     const provider = {
-      getClient: () => ({
-        checkAll: async (): Promise<void> => {
-          calls.push('checkAll');
-        },
-        registerServer: async (name: string, url: string): Promise<void> => {
-          calls.push(`register:${name}:${url}`);
-        },
-        unregisterServer: async (name: string): Promise<void> => {
-          calls.push(`unregister:${name}`);
-        },
-      }),
+      checkAll: async (): Promise<void> => {
+        calls.push('checkAll');
+      },
+      registerServer: async (name: string, url: string): Promise<void> => {
+        calls.push(`register:${name}:${url}`);
+      },
+      unregisterServer: async (name: string): Promise<void> => {
+        calls.push(`unregister:${name}`);
+      },
       openDetailWebview: (serverName: string): void => {
         calls.push(`detail:${serverName}`);
       },
@@ -240,7 +238,7 @@ suite('Command Contracts', () => {
       'checkAll',
       'detail:api',
     ]);
-    assert.strictEqual(refreshes, 3);
+    assert.strictEqual(refreshes, 0);
     assert.strictEqual(informationMessages.length, 3);
   });
 
