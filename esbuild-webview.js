@@ -2,7 +2,7 @@ const esbuild = require('esbuild');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
-const panels = ['health', 'debug', 'a2a', 'info', 'session', 'task'];
+const panels = ['health', 'debug', 'a2a'];
 
 function createOptions(panel) {
   return {
