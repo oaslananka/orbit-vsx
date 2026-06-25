@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { COMMAND_IDS } from '../../constants';
-import { getNonce, getWebviewUri } from '../../utils/webview';
+import { getNonce, getWebviewUri, renderOrbitWebviewHtml } from '../../utils/webview';
 import { executeAllowedWebviewCommand, getWebviewClipboardText } from '../../utils/webviewMessages';
-import { escapeHtml, serializeJsonForInlineScript } from '../../utils/escapeHtml';
 import type { McpServer } from './types';
 
 const HEALTH_WEBVIEW_COMMANDS = new Set<string>([
@@ -32,7 +31,13 @@ export function createHealthDetailWebview(
   ]);
   const nonce = getNonce();
 
-  panel.webview.html = renderHealthDetailHtml(server, scriptUri, nonce);
+  panel.webview.html = renderOrbitWebviewHtml({
+    title: `${server.name} — Health Detail`,
+    webview: panel.webview,
+    scriptUri,
+    nonce,
+    initialData: server,
+  });
 
   panel.webview.onDidReceiveMessage((message: unknown) => {
     if (executeAllowedWebviewCommand(message, HEALTH_WEBVIEW_COMMANDS)) {
@@ -46,28 +51,4 @@ export function createHealthDetailWebview(
       });
     }
   });
-}
-
-function renderHealthDetailHtml(server: McpServer, scriptUri: vscode.Uri, nonce: string): string {
-  const initialData = serializeJsonForInlineScript(server);
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none';
-             style-src 'unsafe-inline';
-             script-src 'nonce-${nonce}';">
-  <title>${escapeHtml(server.name)} — Health Detail</title>
-</head>
-<body>
-  <div id="root"></div>
-  <script nonce="${nonce}">
-    window.__ORBIT_DATA__ = ${initialData};
-  </script>
-  <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
-</body>
-</html>`;
 }
