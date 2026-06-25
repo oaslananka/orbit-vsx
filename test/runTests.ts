@@ -28,14 +28,19 @@ function stopProcessTree(processId: number): void {
     return;
   }
   try {
-    process.kill(processId, 'SIGKILL');
+    process.kill(-processId, 'SIGKILL');
   } catch {
-    // Process already exited.
+    try {
+      process.kill(processId, 'SIGKILL');
+    } catch {
+      // Process already exited.
+    }
   }
 }
 
 async function runVSCodeTests(executablePath: string, args: string[]): Promise<TestProcessResult> {
   const child = spawn(executablePath, args, {
+    detached: process.platform !== 'win32',
     env: createElectronHostEnv(process.env),
     shell: false,
   });

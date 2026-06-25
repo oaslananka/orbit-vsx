@@ -44,4 +44,13 @@ suite('Test Build Contracts', () => {
     assert.ok(manifest.scripts['pretest:unit']?.includes('pnpm run test:compile'));
     assert.ok(manifest.scripts['smoke:package']?.startsWith('pnpm run test:compile'));
   });
+
+  test('Should kill the full VS Code test process group on host timeout', () => {
+    const source = fs.readFileSync(path.join(REPO_ROOT, 'test/runTests.ts'), 'utf8');
+
+    assert.ok(source.includes("detached: process.platform !== 'win32'"));
+    assert.ok(source.includes("process.kill(-processId, 'SIGKILL')"));
+    assert.ok(source.includes('TEST_HOST_TIMEOUT_MS'));
+    assert.ok(source.includes('VS Code test host timed out'));
+  });
 });

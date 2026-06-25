@@ -22,14 +22,20 @@ function stopProcessTree(processId) {
         return;
     }
     try {
-        process.kill(processId, 'SIGKILL');
+        process.kill(-processId, 'SIGKILL');
     }
     catch {
-        // Process already exited.
+        try {
+            process.kill(processId, 'SIGKILL');
+        }
+        catch {
+            // Process already exited.
+        }
     }
 }
 async function runVSCodeTests(executablePath, args) {
     const child = (0, node_child_process_1.spawn)(executablePath, args, {
+        detached: process.platform !== 'win32',
         env: (0, electronHostEnv_1.createElectronHostEnv)(process.env),
         shell: false,
     });
