@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { COMMAND_IDS } from '../../constants';
-import { getNonce, getWebviewUri } from '../../utils/webview';
+import { getNonce, getWebviewUri, renderOrbitWebviewHtml } from '../../utils/webview';
 import {
   executeAllowedWebviewCommand,
   getWebviewClipboardText,
@@ -34,7 +34,12 @@ export function createDebugDetailWebview(
   ]);
   const nonce = getNonce();
 
-  panel.webview.html = renderDebugShellHtml(scriptUri, nonce);
+  panel.webview.html = renderOrbitWebviewHtml({
+    title: 'Debug Session',
+    webview: panel.webview,
+    scriptUri,
+    nonce,
+  });
 
   panel.webview.onDidReceiveMessage((message: unknown) => {
     if (executeAllowedWebviewCommand(message, DEBUG_WEBVIEW_COMMANDS)) {
@@ -79,23 +84,4 @@ export function createDebugDetailWebview(
       void vscode.env.clipboard.writeText(clipboardText);
     }
   });
-}
-
-function renderDebugShellHtml(scriptUri: vscode.Uri, nonce: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none';
-             style-src 'unsafe-inline';
-             script-src 'nonce-${nonce}';">
-  <title>Debug Session</title>
-</head>
-<body>
-  <div id="root"></div>
-  <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
-</body>
-</html>`;
 }

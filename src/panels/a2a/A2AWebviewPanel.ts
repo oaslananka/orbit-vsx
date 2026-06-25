@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { COMMAND_IDS } from '../../constants';
-import { getNonce, getWebviewUri } from '../../utils/webview';
+import { getNonce, getWebviewUri, renderOrbitWebviewHtml } from '../../utils/webview';
 import { executeAllowedWebviewCommand, getWebviewClipboardText } from '../../utils/webviewMessages';
-import { escapeHtml, serializeJsonForInlineScript } from '../../utils/escapeHtml';
 import type { AgentCard } from './types';
 
 const A2A_WEBVIEW_COMMANDS = new Set<string>([
@@ -30,7 +29,13 @@ export function createA2ADetailWebview(context: vscode.ExtensionContext, card: A
   ]);
   const nonce = getNonce();
 
-  panel.webview.html = renderA2AShellHtml(card, scriptUri, nonce);
+  panel.webview.html = renderOrbitWebviewHtml({
+    title: `${card.name} — Agent Card`,
+    webview: panel.webview,
+    scriptUri,
+    nonce,
+    initialData: card,
+  });
 
   panel.webview.onDidReceiveMessage((message: unknown) => {
     if (executeAllowedWebviewCommand(message, A2A_WEBVIEW_COMMANDS)) {
@@ -44,28 +49,4 @@ export function createA2ADetailWebview(context: vscode.ExtensionContext, card: A
       });
     }
   });
-}
-
-function renderA2AShellHtml(card: AgentCard, scriptUri: vscode.Uri, nonce: string): string {
-  const initialData = serializeJsonForInlineScript(card);
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none';
-             style-src 'unsafe-inline';
-             script-src 'nonce-${nonce}';">
-  <title>${escapeHtml(card.name)} — Agent Card</title>
-</head>
-<body>
-  <div id="root"></div>
-  <script nonce="${nonce}">
-    window.__ORBIT_DATA__ = ${initialData};
-  </script>
-  <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
-</body>
-</html>`;
 }
