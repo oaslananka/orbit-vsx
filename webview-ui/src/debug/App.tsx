@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EmptyState } from '../components/EmptyState';
 
@@ -9,14 +9,16 @@ declare function acquireVsCodeApi(): {
 };
 
 interface FixAttempt {
+  id: string;
   description: string;
   timestamp: string;
-  success?: boolean;
+  successful: boolean;
 }
 
-interface CommandRecord {
+interface TerminalCommand {
   command: string;
   timestamp: string;
+  exitCode?: number;
 }
 
 interface DebugSession {
@@ -24,11 +26,17 @@ interface DebugSession {
   title: string;
   status: 'open' | 'resolved' | 'abandoned';
   errorText?: string;
+  description?: string;
   createdAt: string;
+  updatedAt: string;
   tags: string[];
-  fixes?: FixAttempt[];
-  commands?: CommandRecord[];
+  fixAttempts: FixAttempt[];
+  terminalCommands: TerminalCommand[];
 }
+
+type DebugMessage =
+  | { type: 'update'; payload: DebugSession }
+  | { type: 'error'; payload: { message?: string } };
 
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : null;
 
@@ -40,21 +48,17 @@ class ErrorBoundary extends React.Component<
     super(props);
     this.state = { hasError: false, message: '' };
   }
+
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, message: error.message };
   }
+
   render() {
     if (this.state.hasError) {
       return (
         <div style={styles.errorBox}>
-          <strong>Something went wrong</strong>
-          <pre style={{ marginTop: 8, fontSize: '0.85em' }}>{this.state.message}</pre>
-          <button
-            style={styles.btn}
-            onClick={() => this.setState({ hasError: false, message: '' })}
-          >
-            Retry
-          </button>
+          <strong>Debug view failed</strong>
+          <p>{this.state.message}</p>
         </div>
       );
     }
@@ -62,259 +66,256 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-function App(): React.ReactElement {
+function Section({ children, title }: { children: React.ReactNode; title: string }) {
+  return (
+    <section style={styles.section}>
+      <h2 style={styles.sectionTitle}>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function formatExitCode(command: TerminalCommand): string {
+  return command.exitCode === undefined ? 'exit unknown' : `exit ${command.exitCode}`;
+}
+
+function App() {
   const [session, setSession] = useState<DebugSession | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newFix, setNewFix] = useState('');
 
-  const handleMessage = useCallback((event: MessageEvent) => {
-    const msg = event.data as { type: string; payload: DebugSession & { message?: string } };
-    if (msg.type === 'update') {
-      setSession(msg.payload);
-      setLoading(false);
-      setError(null);
-    }
-    if (msg.type === 'error') {
-      setError(msg.payload.message ?? 'Unknown error');
-      setLoading(false);
-    }
+  useEffect(() => {
+    const handler = (event: MessageEvent<DebugMessage>) => {
+      const message = event.data;
+      if (message.type === 'update') {
+        setSession(message.payload);
+        setError(null);
+        return;
+      }
+      if (message.type === 'error') {
+        setError(message.payload.message ?? 'Unknown debug panel error');
+      }
+    };
+
+    window.addEventListener('message', handler);
+    vscode?.postMessage({ type: 'ready' });
+    return () => window.removeEventListener('message', handler);
   }, []);
 
-  useEffect(() => {
-    window.addEventListener('message', handleMessage);
-    vscode?.postMessage({ type: 'ready' });
-    return () => window.removeEventListener('message', handleMessage);
-  }, [handleMessage]);
-
-  if (loading) {
-    return (
-      <div style={styles.container}>
-        <p style={{ opacity: 0.6 }}>Loading session…</p>
-      </div>
-    );
-  }
+  const submitFix = useCallback(() => {
+    const description = newFix.trim();
+    if (!description) return;
+    vscode?.postMessage({ type: 'addFix', description });
+    setNewFix('');
+  }, [newFix]);
 
   if (error) {
     return (
-      <div style={styles.container}>
+      <main style={styles.container}>
         <div style={styles.errorBox}>{error}</div>
-      </div>
+      </main>
     );
   }
 
   if (!session) {
     return (
-      <div style={styles.container}>
+      <main style={styles.container}>
         <EmptyState
           icon="bug"
           title="No debug sessions"
-          description="Start a session to track errors and fix attempts."
-          actionLabel="New Session"
+          description="Open a debug session from the Orbit Debug panel to inspect errors and fixes."
+          actionLabel="Start Debug Session"
           onAction={() =>
             vscode?.postMessage({ type: 'command', command: 'orbit.debug.newSession' })
           }
         />
-      </div>
+      </main>
     );
   }
 
-  function submitFix() {
-    if (!newFix.trim()) return;
-    vscode?.postMessage({ type: 'addFix', description: newFix.trim() });
-    setNewFix('');
-  }
-
-  const statusColors: Record<string, string> = {
-    open: 'var(--vscode-charts-green)',
-    resolved: 'var(--vscode-charts-blue, #3794ff)',
-    abandoned: 'var(--vscode-charts-red)',
+  const statusColors: Record<DebugSession['status'], string> = {
+    open: '#3b82f6',
+    resolved: '#16a34a',
+    abandoned: '#6b7280',
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>{session.title}</h1>
-        <span
-          style={{
-            ...styles.badge,
-            background: statusColors[session.status] ?? 'gray',
-            color: '#fff',
-          }}
-        >
+    <main style={styles.container}>
+      <header style={styles.header}>
+        <div>
+          <h1 style={styles.title}>{session.title}</h1>
+          <div style={styles.meta}>
+            <span>Created: {session.createdAt}</span>
+            <span>Updated: {session.updatedAt}</span>
+          </div>
+        </div>
+        <span style={{ ...styles.badge, background: statusColors[session.status] }}>
           {session.status.toUpperCase()}
         </span>
-      </div>
+      </header>
 
-      <div style={styles.meta}>
-        <span>Created: {session.createdAt}</span>
-        {session.tags.length > 0 && (
-          <span style={{ marginLeft: 12 }}>
-            {session.tags.map((t) => (
-              <span key={t} style={styles.tag}>
-                {t}
-              </span>
-            ))}
-          </span>
-        )}
-      </div>
+      {session.tags.length > 0 && (
+        <div style={styles.tags}>
+          {session.tags.map((tag) => (
+            <span key={tag} style={styles.tag}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
 
-      {session.errorText && <div style={styles.errorText}>{session.errorText}</div>}
+      {session.description && <p style={styles.description}>{session.description}</p>}
+      {session.errorText && <pre style={styles.errorText}>{session.errorText}</pre>}
 
-      <Section title={`Fix Attempts (${(session.fixes ?? []).length}`}>
-        {(session.fixes ?? []).length === 0 ? (
-          <p style={{ opacity: 0.5, margin: 0 }}>No fix attempts recorded.</p>
+      <Section title={`Fix Attempts (${session.fixAttempts.length})`}>
+        {session.fixAttempts.length === 0 ? (
+          <p style={styles.muted}>No fix attempts recorded yet.</p>
         ) : (
-          (session.fixes ?? []).map((fix, i) => (
-            <div key={i} style={styles.fixItem}>
-              <span style={{ opacity: 0.5, fontSize: '0.8em', minWidth: 100 }}>
-                {fix.timestamp}
-              </span>
-              <span>{fix.description}</span>
-              {fix.success === true && (
-                <span style={{ color: 'var(--vscode-charts-green)', marginLeft: 8 }}>✓</span>
-              )}
-              {fix.success === false && (
-                <span style={{ color: 'var(--vscode-charts-red)', marginLeft: 8 }}>✗</span>
-              )}
-            </div>
+          session.fixAttempts.map((fix) => (
+            <article key={fix.id} style={styles.card}>
+              <div style={styles.cardHeader}>
+                <strong>{fix.successful ? 'Successful fix' : 'Attempted fix'}</strong>
+                <span style={styles.muted}>{fix.timestamp}</span>
+              </div>
+              <p>{fix.description}</p>
+            </article>
           ))
         )}
-        <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
-          <input
-            style={styles.input}
+        <div style={styles.formRow}>
+          <textarea
             value={newFix}
-            onChange={(e) => setNewFix(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && submitFix()}
-            placeholder="Describe fix attempt…"
+            onChange={(event) => setNewFix(event.target.value)}
+            placeholder="Describe a fix attempt…"
+            style={styles.textarea}
           />
-          <button style={styles.btn} onClick={submitFix}>
-            Add
+          <button style={styles.button} onClick={submitFix} disabled={newFix.trim().length === 0}>
+            Add Fix
           </button>
         </div>
       </Section>
 
-      <Section title={`Terminal Commands (${(session.commands ?? []).length}`}>
-        {(session.commands ?? []).length === 0 ? (
-          <p style={{ opacity: 0.5, margin: 0 }}>No commands recorded.</p>
+      <Section title={`Terminal Commands (${session.terminalCommands.length})`}>
+        {session.terminalCommands.length === 0 ? (
+          <p style={styles.muted}>No terminal commands recorded yet.</p>
         ) : (
-          (session.commands ?? []).map((cmd, i) => (
-            <div key={i} style={styles.cmdItem}>
-              <span style={{ opacity: 0.4, fontSize: '0.75em', minWidth: 100 }}>
-                {cmd.timestamp}
-              </span>
-              <code style={{ fontFamily: 'var(--vscode-editor-font-family)' }}>{cmd.command}</code>
-            </div>
+          session.terminalCommands.map((command, index) => (
+            <article key={`${command.timestamp}-${index}`} style={styles.card}>
+              <code>{command.command}</code>
+              <div style={styles.meta}>
+                <span>{command.timestamp}</span>
+                <span>{formatExitCode(command)}</span>
+              </div>
+            </article>
           ))
         )}
       </Section>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <div style={styles.section}>
-      <h2 style={styles.sectionTitle}>{title}</h2>
-      {children}
-    </div>
+    </main>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: {
-    padding: '12px 16px',
-    fontFamily: 'var(--vscode-font-family)',
-    color: 'var(--vscode-editor-foreground)',
-    background: 'var(--vscode-editor-background)',
-    minHeight: '100vh',
-  },
-  header: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 },
-  title: { fontSize: '1.3em', margin: 0, fontWeight: 600 },
   badge: {
-    display: 'inline-block',
-    padding: '2px 8px',
-    borderRadius: 3,
-    fontSize: '0.75em',
+    borderRadius: 999,
+    color: '#fff',
+    fontSize: 11,
     fontWeight: 700,
-    letterSpacing: 1,
+    padding: '4px 8px',
   },
-  meta: { fontSize: '0.85em', opacity: 0.6, marginBottom: 10 },
-  tag: {
-    display: 'inline-block',
-    background: 'var(--vscode-badge-background)',
-    color: 'var(--vscode-badge-foreground)',
-    borderRadius: 3,
-    padding: '1px 6px',
-    fontSize: '0.8em',
-    marginRight: 4,
+  button: {
+    marginTop: 8,
+    padding: '6px 10px',
   },
-  errorText: {
-    background: 'var(--vscode-inputValidation-errorBackground, rgba(255,0,0,0.1))',
-    border: '1px solid var(--vscode-inputValidation-errorBorder, red)',
-    borderRadius: 4,
-    padding: '8px 12px',
-    fontSize: '0.85em',
-    marginBottom: 10,
-    wordBreak: 'break-all',
+  card: {
+    border: '1px solid var(--vscode-panel-border)',
+    borderRadius: 8,
+    marginTop: 8,
+    padding: 12,
   },
-  section: {
-    background: 'var(--vscode-list-hoverBackground)',
-    borderRadius: 4,
-    padding: '10px 12px',
-    marginBottom: 10,
-  },
-  sectionTitle: { fontSize: '0.9em', fontWeight: 600, margin: '0 0 8px 0', opacity: 0.8 },
-  fixItem: { display: 'flex', alignItems: 'baseline', gap: 8, padding: '3px 0', fontSize: '0.9em' },
-  cmdItem: {
+  cardHeader: {
+    alignItems: 'center',
     display: 'flex',
-    alignItems: 'baseline',
-    gap: 8,
-    padding: '2px 0',
-    fontSize: '0.85em',
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  input: {
-    flex: 1,
-    background: 'var(--vscode-input-background)',
-    color: 'var(--vscode-input-foreground)',
-    border: '1px solid var(--vscode-input-border)',
-    borderRadius: 3,
-    padding: '3px 8px',
-    fontSize: '0.9em',
-    outline: 'none',
+  container: {
+    color: 'var(--vscode-foreground)',
+    fontFamily: 'var(--vscode-font-family)',
+    padding: 20,
   },
-  btn: {
-    background: 'var(--vscode-button-background)',
-    color: 'var(--vscode-button-foreground)',
-    border: 'none',
-    borderRadius: 3,
-    padding: '4px 12px',
-    cursor: 'pointer',
-    fontSize: '0.9em',
+  description: {
+    opacity: 0.85,
   },
   errorBox: {
-    background: 'var(--vscode-inputValidation-errorBackground, rgba(255,0,0,0.1))',
+    background: 'var(--vscode-inputValidation-errorBackground)',
     border: '1px solid var(--vscode-inputValidation-errorBorder)',
-    borderRadius: 4,
+    borderRadius: 8,
+    color: 'var(--vscode-inputValidation-errorForeground)',
     padding: 12,
-    margin: 12,
+  },
+  errorText: {
+    background: 'var(--vscode-textCodeBlock-background)',
+    borderRadius: 8,
+    overflowX: 'auto',
+    padding: 12,
+    whiteSpace: 'pre-wrap',
+  },
+  formRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    marginTop: 12,
+  },
+  header: {
+    alignItems: 'flex-start',
+    display: 'flex',
+    gap: 16,
+    justifyContent: 'space-between',
+  },
+  meta: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 12,
+    opacity: 0.7,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  muted: {
+    opacity: 0.65,
+  },
+  section: {
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    margin: '0 0 8px',
+  },
+  tag: {
+    border: '1px solid var(--vscode-panel-border)',
+    borderRadius: 999,
+    fontSize: 12,
+    padding: '2px 8px',
+  },
+  tags: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 12,
+  },
+  textarea: {
+    background: 'var(--vscode-input-background)',
+    border: '1px solid var(--vscode-input-border)',
+    color: 'var(--vscode-input-foreground)',
+    minHeight: 72,
+    padding: 8,
+    resize: 'vertical',
+  },
+  title: {
+    fontSize: 20,
+    margin: 0,
   },
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  const rootEl = document.getElementById('root');
-  if (rootEl) {
-    const root = createRoot(rootEl);
-    root.render(
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    );
-  }
-});
+createRoot(document.getElementById('root')!).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
