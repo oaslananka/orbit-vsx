@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import type { A2AProvider } from '../panels/a2a/A2AProvider';
-import { validateAgentCardText } from '../panels/a2a/agentCardValidation';
 import type {
   AgentCard,
+  AgentCardDocumentInspection,
+  AgentCardTrustResult,
   AgentRegistryEntry,
   SecurityScheme,
   ValidationResult,
@@ -319,50 +320,66 @@ class ValidateAgentCardTool implements vscode.LanguageModelTool<ValidateAgentCar
   ): Promise<vscode.LanguageModelToolResult> {
     assertWorkspaceTrusted();
     throwIfCancellationRequested(token);
-    const hasJson =
-      typeof options.input.cardJson === 'string' && options.input.cardJson.trim().length > 0;
-    const hasUrl = typeof options.input.url === 'string' && options.input.url.trim().length > 0;
-    if (hasJson === hasUrl) {
-      throw new Error('Provide exactly one of cardJson or url.');
-    }
+    const input = parseValidateAgentCardInput(options.input);
+    const target = getValidateAgentCardTarget(input);
+    recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD, 'started', target);
 
-    recordToolAudit(
-      ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
-      'started',
-      options.input.url ? { kind: 'url', value: options.input.url } : undefined
-    );
     try {
-      if (hasJson) {
-        const validation = validateAgentCardText(options.input.cardJson ?? '');
-        recordToolAudit(
-          ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
-          validation.valid ? 'success' : 'failure'
-        );
-        return jsonToolResult({ validation: summarizeValidation(validation) });
-      }
-
-      const card = await this.a2aProvider.getClient().fetchAgentCard(options.input.url ?? '');
+      const inspection = await this.inspect(input);
       throwIfCancellationRequested(token);
       recordToolAudit(
         ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
-        'success',
-        options.input.url ? { kind: 'url', value: options.input.url } : undefined
+        inspection.validation.valid ? 'success' : 'failure',
+        target,
+        `trust:${inspection.trust.state}`
       );
-      return jsonToolResult({
-        card: summarizeAgentCard(card),
-        validation: { errors: [], valid: true },
-      });
+      return createAgentCardInspectionResult(inspection);
     } catch (error) {
       const policyError = isPublicNetworkPolicyError(error) ? error : undefined;
       recordToolAudit(
         ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
-        isPublicNetworkPolicyError(error) ? 'blocked' : 'failure',
-        options.input.url ? { kind: 'url', value: options.input.url } : undefined,
+        policyError ? 'blocked' : 'failure',
+        target,
         policyError?.code
       );
       throw asToolError(error);
     }
   }
+
+  private inspect(input: ParsedValidateAgentCardInput): Promise<AgentCardDocumentInspection> {
+    if (input.kind === 'json') {
+      return this.a2aProvider.inspectAgentCardText(input.value);
+    }
+    return this.a2aProvider.getClient().inspectAgentCard(input.value);
+  }
+}
+
+interface ParsedValidateAgentCardInput {
+  kind: 'json' | 'url';
+  value: string;
+}
+
+function parseValidateAgentCardInput(input: ValidateAgentCardInput): ParsedValidateAgentCardInput {
+  const cardJson = input.cardJson?.trim() ?? '';
+  const url = input.url?.trim() ?? '';
+  if (cardJson.length > 0 === url.length > 0) {
+    throw new Error('Provide exactly one of cardJson or url.');
+  }
+  return cardJson.length > 0 ? { kind: 'json', value: cardJson } : { kind: 'url', value: url };
+}
+
+function getValidateAgentCardTarget(input: ParsedValidateAgentCardInput): AuditTarget | undefined {
+  return input.kind === 'url' ? { kind: 'url', value: input.value } : undefined;
+}
+
+function createAgentCardInspectionResult(
+  inspection: AgentCardDocumentInspection
+): vscode.LanguageModelToolResult {
+  return jsonToolResult({
+    card: inspection.card ? summarizeAgentCard(inspection.card) : undefined,
+    trust: summarizeAgentCardTrust(inspection.trust),
+    validation: summarizeValidation(inspection.validation),
+  });
 }
 
 function assertWorkspaceTrusted(): void {
@@ -529,7 +546,21 @@ function summarizeAgentRegistryEntry(entry: AgentRegistryEntry): Record<string, 
     card: summarizeAgentCard(entry.card),
     lastSeen: entry.lastSeen,
     online: entry.online,
+    trust: summarizeAgentCardTrust(entry.trust),
     validation: summarizeValidation(entry.validation),
+  };
+}
+
+function summarizeAgentCardTrust(trust: AgentCardTrustResult): Record<string, unknown> {
+  return {
+    algorithm: trust.algorithm,
+    keyId: trust.keyId ? truncateText(trust.keyId, 256) : undefined,
+    keyUrl: trust.keyUrl ? redactUrl(trust.keyUrl) : undefined,
+    reason: trust.reason,
+    signatureCount: trust.signatureCount,
+    state: trust.state,
+    summary: truncateText(trust.summary, 500),
+    verifiedSignatureIndex: trust.verifiedSignatureIndex,
   };
 }
 

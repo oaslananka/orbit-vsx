@@ -81,6 +81,15 @@ function validAgentCard(): Record<string, unknown> {
   };
 }
 
+function unsignedTrust(): Record<string, unknown> {
+  return {
+    reason: 'no_signatures',
+    signatureCount: 0,
+    state: 'unsigned',
+    summary: 'Agent Card is unsigned.',
+  };
+}
+
 suite('Language Model Tools', () => {
   let orbitTools: typeof OrbitToolsModule;
 
@@ -118,15 +127,25 @@ suite('Language Model Tools', () => {
     const providers = {
       a2aProvider: {
         getClient: () => ({
-          fetchAgentCard: async (): Promise<Record<string, unknown>> => validAgentCard(),
+          inspectAgentCard: async (): Promise<Record<string, unknown>> => ({
+            card: validAgentCard(),
+            trust: unsignedTrust(),
+            validation: { errors: [], valid: true },
+          }),
           listAgents: async (): Promise<unknown[]> => [
             {
               card: validAgentCard(),
               lastSeen: '2026-06-24T00:00:00.000Z',
               online: true,
+              trust: unsignedTrust(),
               validation: { errors: [], valid: true },
             },
           ],
+        }),
+        inspectAgentCardText: async (): Promise<Record<string, unknown>> => ({
+          card: validAgentCard(),
+          trust: unsignedTrust(),
+          validation: { errors: [], valid: true },
         }),
       },
       debugProvider: {
@@ -367,7 +386,8 @@ suite('Language Model Tools', () => {
 
     assert.ok(source.includes('assertWorkspaceTrusted();'));
     assert.ok(source.includes('recordToolAudit('));
-    assert.ok(source.includes("isPublicNetworkPolicyError(error) ? 'blocked' : 'failure'"));
+    assert.ok(source.includes('const policyError = isPublicNetworkPolicyError(error)'));
+    assert.ok(source.includes("policyError ? 'blocked' : 'failure'"));
     assert.ok(source.includes('MAX_TEXT_LENGTH'));
     assert.ok(!source.includes('truncateText(JSON.stringify'));
     assert.ok(source.includes('throwIfCancellationRequested(token)'));

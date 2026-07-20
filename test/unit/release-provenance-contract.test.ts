@@ -60,6 +60,9 @@ suite('Release Provenance Contracts', () => {
       'form-data',
       'undici',
       'js-yaml',
+      'brace-expansion@<1.1.16',
+      'brace-expansion@>=2.0.0 <2.1.2',
+      'brace-expansion@>=3.0.0 <5.0.7',
     ];
 
     assert.match(workspace, /docs\/PNPM_OVERRIDES\.md/);
@@ -73,6 +76,7 @@ suite('Release Provenance Contracts', () => {
     assert.match(overrideDocument, /GHSA-73rr-hh4g-fpgx/);
     assert.match(overrideDocument, /GHSA-hmw2-7cc7-3qxx/);
     assert.match(overrideDocument, /GHSA-vmh5-mc38-953g/);
+    assert.match(overrideDocument, /GHSA-3jxr-9vmj-r5cp/);
   });
 
   test('Should expose consistent Apache-2.0 metadata and the complete license text', () => {

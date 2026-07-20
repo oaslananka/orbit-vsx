@@ -48,6 +48,7 @@ export const CONFIG_KEYS = {
   A2A_AUTO_VALIDATE: 'orbit.a2a.autoValidateOnSave',
   A2A_LOCAL_CARD_SCAN_LIMIT: 'orbit.a2a.localCardScanLimit',
   A2A_LOCAL_CARD_EXCLUDE_GLOB: 'orbit.a2a.localCardExcludeGlob',
+  A2A_TRUSTED_JWKS_URLS: 'orbit.a2a.trustedJwksUrls',
   MCP_EXPLORER_ENABLED: 'orbit.mcp.explorer.enabled',
 } as const;
 

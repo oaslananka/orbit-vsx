@@ -1,13 +1,22 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../../config';
 import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants';
+import { recordAuditEvent, type AuditOutcome } from '../../utils/audit';
+import { Logger } from '../../utils/logger';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
 import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../../utils/workspaceTrust';
-import { Logger } from '../../utils/logger';
-import { validateAgentCardText } from './agentCardValidation';
 import { A2AClient } from './A2AClient';
 import { createA2ADetailWebview } from './A2AWebviewPanel';
-import type { AgentCard, AgentRegistryEntry, LocalAgentCard, ValidationResult } from './types';
+import { AgentCardTrustVerifier } from './agentCardTrust';
+import type {
+  AgentCard,
+  AgentCardDocumentInspection,
+  AgentCardInspection,
+  AgentCardTrustResult,
+  AgentRegistryEntry,
+  LocalAgentCard,
+  ValidationResult,
+} from './types';
 
 class A2ARegistryItem extends vscode.TreeItem {
   constructor(
@@ -22,8 +31,9 @@ class A2ARegistryItem extends vscode.TreeItem {
     );
     this.id = `a2a-registry:${registryUrl}`;
     this.iconPath = new vscode.ThemeIcon('cloud');
+    const trustCounts = countTrustStates(entries.map((entry) => entry.trust));
     this.tooltip = new vscode.MarkdownString(
-      `**Agent Registry**\n\nURL: \`${registryUrl}\`\nAgents: ${entries.length}`
+      `**Agent Registry**\n\nURL: \`${registryUrl}\`\n\nAgents: ${entries.length}\n\nTrust: ${formatTrustCounts(trustCounts)}`
     );
     this.contextValue = 'a2aRegistry';
   }
@@ -34,12 +44,10 @@ class A2AAgentItem extends vscode.TreeItem {
     const card = entry.card;
     super(`${card.name}  v${card.version}`, vscode.TreeItemCollapsibleState.None);
     this.id = `a2a-agent:${card.name}`;
-    this.iconPath = entry.online
-      ? new vscode.ThemeIcon('circuit-board')
-      : new vscode.ThemeIcon('circuit-board', new vscode.ThemeColor('charts.red'));
-    this.description = entry.online ? 'valid' : 'offline';
+    this.iconPath = trustThemeIcon(entry.trust, entry.online);
+    this.description = `${entry.online ? 'online' : 'offline'} · ${entry.trust.state}`;
     this.tooltip = new vscode.MarkdownString(
-      `**${card.name}** v${card.version}\n\n${card.description}\n\nOnline: ${entry.online}\nValidation: valid`
+      `**${card.name}** v${card.version}\n\n${card.description}\n\nOnline: ${entry.online}\n\nSchema: ${entry.validation.valid ? 'valid' : 'invalid'}\n\nSignature trust: **${entry.trust.state}**\n\n${entry.trust.summary}`
     );
     this.contextValue = VIEW_ITEM_CONTEXT.A2A_AGENT;
   }
@@ -54,12 +62,14 @@ class A2ALocalCardItem extends vscode.TreeItem {
     super(localCard.filePath, vscode.TreeItemCollapsibleState.None);
     this.id = `a2a-local:${localCard.filePath}`;
     this.iconPath = localCard.validation.valid
-      ? new vscode.ThemeIcon('file-code', new vscode.ThemeColor('charts.green'))
+      ? trustThemeIcon(localCard.trust, true, 'file-code')
       : new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
-    this.description = localCard.validation.valid ? 'valid local card' : 'invalid local card';
+    this.description = `${localCard.validation.valid ? 'valid' : 'invalid'} · ${localCard.trust.state}`;
     const errors = localCard.validation.errors.slice(0, 8).join('\n');
+    const errorDetails = errors.length > 0 ? `\n\nErrors:\n${errors}` : '';
+    const schemaState = localCard.validation.valid ? 'valid' : 'invalid';
     this.tooltip = new vscode.MarkdownString(
-      `**Local Agent Card**\n\n\`${localCard.filePath}\`\n\nValidation: ${localCard.validation.valid ? 'valid' : 'invalid'}${errors ? `\n\nErrors:\n${errors}` : ''}`
+      `**Local Agent Card**\n\n\`${localCard.filePath}\`\n\nSchema: ${schemaState}\n\nSignature trust: **${localCard.trust.state}**\n\n${localCard.trust.summary}${errorDetails}`
     );
     this.contextValue = 'a2aLocalCard';
   }
@@ -86,7 +96,12 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
 
   private rebuildClient(): void {
     const config = readConfig();
-    this.client = new A2AClient(config.a2a.registryUrl, config.a2a.cliPath);
+    this.client = new A2AClient(
+      config.a2a.registryUrl,
+      config.a2a.cliPath,
+      undefined,
+      new AgentCardTrustVerifier({ trustedJwksUrls: config.a2a.trustedJwksUrls })
+    );
   }
 
   getClient(): A2AClient {
@@ -98,14 +113,47 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
   }
 
   openDetailWebview(agentName: string): void {
-    const entry = this.entries.find((e) => e.card.name === agentName);
+    const entry = this.entries.find((candidate) => candidate.card.name === agentName);
     if (entry) {
-      createA2ADetailWebview(this._context, entry.card);
+      createA2ADetailWebview(this._context, {
+        card: entry.card,
+        trust: entry.trust,
+        validation: entry.validation,
+      });
     }
   }
 
-  openDetailWebviewFromCard(card: AgentCard): void {
-    createA2ADetailWebview(this._context, card);
+  openDetailWebviewFromInspection(inspection: AgentCardInspection): void {
+    createA2ADetailWebview(this._context, inspection);
+  }
+
+  openDetailWebviewFromCard(card: AgentCard, trust = inferredTrust(card)): void {
+    createA2ADetailWebview(this._context, {
+      card,
+      trust,
+      validation: { errors: [], valid: true },
+    });
+  }
+
+  async inspectAgentCardText(text: string): Promise<AgentCardDocumentInspection> {
+    return this.client.inspectAgentCardText(text);
+  }
+
+  updateDocumentDiagnostics(
+    uri: vscode.Uri,
+    text: string,
+    inspection: AgentCardDocumentInspection,
+    additionalErrors: string[] = []
+  ): void {
+    this.updateLocalDiagnostics(
+      uri,
+      text,
+      {
+        errors: [...inspection.validation.errors, ...additionalErrors],
+        valid: inspection.validation.valid && additionalErrors.length === 0,
+      },
+      inspection.trust
+    );
   }
 
   async refresh(): Promise<void> {
@@ -120,6 +168,9 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
         this._error = WORKSPACE_TRUST_REQUIRED_MESSAGE;
       } else if (config.a2a.enabled) {
         this.entries = await this.client.listAgents();
+        this.entries.forEach((entry) =>
+          auditTrustResult(entry.trust, { kind: 'identifier', value: entry.card.name })
+        );
         this.registryItem =
           this.entries.length > 0
             ? new A2ARegistryItem(config.a2a.registryUrl, this.entries)
@@ -157,6 +208,9 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
         `**${card.name}** v${card.version}  \n` +
           `${card.description}  \n` +
           `Online: \`${item.entry.online}\`  \n` +
+          `Schema: \`${item.entry.validation.valid ? 'valid' : 'invalid'}\`  \n` +
+          `Signature trust: \`${item.entry.trust.state}\`  \n` +
+          `Trust detail: ${item.entry.trust.summary}  \n` +
           `Interfaces: ${card.supportedInterfaces.map((agentInterface) => agentInterface.protocolBinding).join(', ')}  \n` +
           `Input: ${card.defaultInputModes.join(', ')}  \n` +
           `Output: ${card.defaultOutputModes.join(', ')}  \n` +
@@ -193,10 +247,18 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
           vscode.TreeItemCollapsibleState.Collapsed
         );
         const invalidCount = this.localCards.filter((card) => !card.validation.valid).length;
+        const unsafeCount = this.localCards.filter(
+          (card) => card.trust.state === 'invalid' || card.trust.state === 'key-unavailable'
+        ).length;
         localItem.iconPath =
-          invalidCount > 0 ? new vscode.ThemeIcon('warning') : new vscode.ThemeIcon('folder');
-        localItem.description =
-          invalidCount > 0 ? `${invalidCount} invalid` : `${this.localCards.length} valid`;
+          invalidCount > 0 || unsafeCount > 0
+            ? new vscode.ThemeIcon('warning')
+            : new vscode.ThemeIcon('folder');
+        localItem.description = getLocalCardsDescription(
+          this.localCards.length,
+          invalidCount,
+          unsafeCount
+        );
         items.push(localItem);
       }
       if (items.length === 0) {
@@ -213,7 +275,7 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
     }
 
     if (element instanceof A2ARegistryItem) {
-      return element.entries.map((e) => new A2AAgentItem(e));
+      return element.entries.map((entry) => new A2AAgentItem(entry));
     }
 
     if (element.label === 'Local Cards') {
@@ -257,34 +319,148 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
     try {
       const bytes = await vscode.workspace.fs.readFile(uri);
       const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-      const validation = validateAgentCardText(text);
-      this.updateLocalDiagnostics(uri, text, validation);
-      return { filePath: uri.fsPath, validation };
+      const inspection = await this.client.inspectAgentCardText(text);
+      auditTrustResult(inspection.trust, { kind: 'path', value: uri.fsPath });
+      this.updateDocumentDiagnostics(uri, text, inspection);
+      return {
+        filePath: uri.fsPath,
+        ...(inspection.card ? { card: inspection.card } : {}),
+        validation: inspection.validation,
+        trust: inspection.trust,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const validation: ValidationResult = { errors: [message], valid: false };
-      this.updateLocalDiagnostics(uri, '', validation);
-      return { filePath: uri.fsPath, validation };
+      const trust: AgentCardTrustResult = {
+        reason: 'schema_invalid',
+        signatureCount: 0,
+        state: 'unverified',
+        summary: 'Signature trust was not evaluated because the Agent Card could not be read.',
+      };
+      this.updateLocalDiagnostics(uri, '', validation, trust);
+      return { filePath: uri.fsPath, validation, trust };
     }
   }
 
   private updateLocalDiagnostics(
     uri: vscode.Uri,
     text: string,
-    validation: ValidationResult
+    validation: ValidationResult,
+    trust: AgentCardTrustResult
   ): void {
-    if (validation.valid) {
-      this.diagnosticCollection.delete(uri);
-      return;
-    }
     const diagnostics = validation.errors.map((message) => {
       const range = createDiagnosticRange(text, message);
       const diagnostic = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Error);
-      diagnostic.source = 'Orbit A2A';
+      diagnostic.source = 'Orbit A2A Schema';
       return diagnostic;
     });
-    this.diagnosticCollection.set(uri, diagnostics);
+
+    if (validation.valid && trust.state !== 'verified') {
+      const trustDiagnostic = new vscode.Diagnostic(
+        createDiagnosticRange(text, '$.signatures'),
+        `Agent Card signature trust: ${trust.state}. ${trust.summary}`,
+        trustDiagnosticSeverity(trust)
+      );
+      trustDiagnostic.source = 'Orbit A2A Trust';
+      trustDiagnostic.code = `orbit.a2a.trust.${trust.state}`;
+      diagnostics.push(trustDiagnostic);
+    }
+
+    if (diagnostics.length === 0) {
+      this.diagnosticCollection.delete(uri);
+    } else {
+      this.diagnosticCollection.set(uri, diagnostics);
+    }
   }
+}
+
+function getLocalCardsDescription(
+  total: number,
+  invalidCount: number,
+  unsafeCount: number
+): string {
+  if (invalidCount > 0) return `${invalidCount} invalid`;
+  if (unsafeCount > 0) return `${unsafeCount} trust warning`;
+  return `${total} checked`;
+}
+
+function getTrustAuditOutcome(trust: AgentCardTrustResult): AuditOutcome {
+  if (trust.state === 'verified' || trust.state === 'unsigned') return 'success';
+  if (trust.reason === 'untrusted_key_url' || trust.reason === 'unsafe_algorithm') {
+    return 'blocked';
+  }
+  return 'failure';
+}
+
+function auditTrustResult(
+  trust: AgentCardTrustResult,
+  target: { kind: 'identifier' | 'path'; value: string }
+): void {
+  recordAuditEvent({
+    surface: 'a2a',
+    operation: 'verify_agent_card_signature',
+    outcome: getTrustAuditOutcome(trust),
+    target,
+    detail: `trust:${trust.state}`,
+  });
+}
+
+function inferredTrust(card: AgentCard): AgentCardTrustResult {
+  return card.signatures?.length
+    ? {
+        reason: 'unsupported_algorithm',
+        signatureCount: card.signatures.length,
+        state: 'unverified',
+        summary: 'Agent Card signatures have not been cryptographically verified.',
+      }
+    : {
+        reason: 'no_signatures',
+        signatureCount: 0,
+        state: 'unsigned',
+        summary: 'Agent Card is unsigned.',
+      };
+}
+
+function trustDiagnosticSeverity(trust: AgentCardTrustResult): vscode.DiagnosticSeverity {
+  switch (trust.state) {
+    case 'invalid':
+      return vscode.DiagnosticSeverity.Error;
+    case 'key-unavailable':
+    case 'unverified':
+      return vscode.DiagnosticSeverity.Warning;
+    default:
+      return vscode.DiagnosticSeverity.Information;
+  }
+}
+
+function trustThemeIcon(
+  trust: AgentCardTrustResult,
+  online: boolean,
+  fallbackIcon = 'circuit-board'
+): vscode.ThemeIcon {
+  if (!online || trust.state === 'invalid') {
+    return new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
+  }
+  if (trust.state === 'verified') {
+    return new vscode.ThemeIcon('verified-filled', new vscode.ThemeColor('charts.green'));
+  }
+  if (trust.state === 'key-unavailable' || trust.state === 'unverified') {
+    return new vscode.ThemeIcon('warning', new vscode.ThemeColor('charts.yellow'));
+  }
+  return new vscode.ThemeIcon(fallbackIcon);
+}
+
+function countTrustStates(results: AgentCardTrustResult[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const result of results) counts[result.state] = (counts[result.state] ?? 0) + 1;
+  return counts;
+}
+
+function formatTrustCounts(counts: Record<string, number>): string {
+  const entries = Object.entries(counts);
+  return entries.length === 0
+    ? 'none'
+    : entries.map(([state, count]) => `${state}=${count}`).join(', ');
 }
 
 function createDiagnosticRange(text: string, message: string): vscode.Range {

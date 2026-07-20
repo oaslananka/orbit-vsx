@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added
+
+- Verify A2A Agent Card JWS signatures with RFC 8785 canonicalization, ES256/RS256 allowlists, same-origin or explicitly trusted HTTPS JWKS resolution, bounded key caching, and explicit trust states across trees, webviews, diagnostics, Language Model Tools, and audit output.
+
+### Security
+
+- Reject unsafe, malformed, tampered, expired, revoked, incompatible, and untrusted Agent Card signature inputs without logging raw signatures or key material.
+- Pin all vulnerable `brace-expansion` major lines to the first patched releases for GHSA-3jxr-9vmj-r5cp / CVE-2026-13149.
+
 ## [0.6.0] - 2026-07-20
 
 ### Changed

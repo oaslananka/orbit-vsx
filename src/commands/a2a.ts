@@ -2,9 +2,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import type { A2AProvider } from '../panels/a2a/A2AProvider';
+import type { AgentCardTrustResult } from '../panels/a2a/types';
 import { COMMAND_IDS } from '../constants';
 import { requireWorkspaceTrust } from '../utils/workspaceTrust';
-import { recordAuditEvent } from '../utils/audit';
+import { recordAuditEvent, type AuditOutcome } from '../utils/audit';
 import { isPublicNetworkPolicyError } from '../utils/publicJsonFetch';
 
 function getWorkspaceFolderForUri(uri: vscode.Uri): vscode.WorkspaceFolder | undefined {
@@ -24,6 +25,14 @@ async function pickScaffoldFolder(): Promise<vscode.WorkspaceFolder | undefined>
     { placeHolder: 'Select workspace folder for the new A2A agent' }
   );
   return picked?.folder;
+}
+
+function getTrustAuditOutcome(trust: AgentCardTrustResult): AuditOutcome {
+  if (trust.state === 'verified' || trust.state === 'unsigned') return 'success';
+  if (trust.reason === 'untrusted_key_url' || trust.reason === 'unsafe_algorithm') {
+    return 'blocked';
+  }
+  return 'failure';
 }
 
 export function registerA2ACommands(
@@ -63,21 +72,23 @@ export function registerA2ACommands(
           outcome: result.valid ? 'success' : 'failure',
           target: { kind: 'path', value: filePath },
         });
-        const diagnostics: vscode.Diagnostic[] = result.errors.map((msg) => {
-          const diag = new vscode.Diagnostic(
-            new vscode.Range(0, 0, 0, 0),
-            msg,
-            vscode.DiagnosticSeverity.Error
-          );
-          diag.source = 'Orbit A2A';
-          return diag;
+        const bytes = await vscode.workspace.fs.readFile(targetUri);
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+        const inspection = await a2aProvider.inspectAgentCardText(text);
+        a2aProvider.updateDocumentDiagnostics(targetUri, text, inspection, result.errors);
+
+        recordAuditEvent({
+          surface: 'a2a',
+          operation: 'verify_agent_card_signature',
+          outcome: inspection.trust.state === 'verified' ? 'success' : 'failure',
+          target: { kind: 'path', value: filePath },
+          detail: `trust:${inspection.trust.state}`,
         });
 
-        const collection = a2aProvider.getDiagnosticCollection();
-        collection.set(targetUri, diagnostics);
-
-        if (result.valid) {
-          vscode.window.showInformationMessage('Agent card is valid.');
+        if (result.valid && inspection.validation.valid) {
+          vscode.window.showInformationMessage(
+            `Agent card schema is valid; signature trust is ${inspection.trust.state}.`
+          );
         } else {
           const count = result.errors.length;
           vscode.window.showWarningMessage(
@@ -115,14 +126,25 @@ export function registerA2ACommands(
           outcome: 'started',
           target: { kind: 'url', value: url },
         });
-        const card = await a2aProvider.getClient().fetchAgentCard(url);
+        const inspection = await a2aProvider.getClient().inspectAgentCard(url);
         recordAuditEvent({
           surface: 'network',
           operation: 'discover_agent_card',
           outcome: 'success',
           target: { kind: 'url', value: url },
+          detail: `trust:${inspection.trust.state}`,
         });
-        a2aProvider.openDetailWebviewFromCard(card);
+        recordAuditEvent({
+          surface: 'a2a',
+          operation: 'verify_agent_card_signature',
+          outcome: getTrustAuditOutcome(inspection.trust),
+          target: { kind: 'url', value: url },
+          detail: `trust:${inspection.trust.state}`,
+        });
+        a2aProvider.openDetailWebviewFromInspection(inspection);
+        vscode.window.showInformationMessage(
+          `Discovered ${inspection.card.name}; signature trust is ${inspection.trust.state}.`
+        );
       } catch (error) {
         const policyError = isPublicNetworkPolicyError(error) ? error : undefined;
         recordAuditEvent({

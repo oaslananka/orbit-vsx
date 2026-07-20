@@ -109,16 +109,76 @@ export interface AuthScheme {
   verificationUrl?: string;
 }
 
+export type AgentCardTrustState =
+  | 'unsigned'
+  | 'unverified'
+  | 'verified'
+  | 'schema_invalid'
+  | 'invalid'
+  | 'key-unavailable';
+
+export type AgentCardTrustReason =
+  | 'verified'
+  | 'schema_invalid'
+  | 'no_signatures'
+  | 'malformed_signature'
+  | 'malformed_protected_header'
+  | 'canonicalization_failed'
+  | 'header_conflict'
+  | 'missing_protected_header'
+  | 'unsafe_algorithm'
+  | 'unsupported_algorithm'
+  | 'unsupported_critical_header'
+  | 'invalid_typ'
+  | 'missing_key_url'
+  | 'invalid_key_url'
+  | 'untrusted_key_url'
+  | 'key_fetch_failed'
+  | 'key_not_found'
+  | 'key_expired'
+  | 'key_revoked'
+  | 'key_not_yet_valid'
+  | 'key_algorithm_mismatch'
+  | 'key_usage_mismatch'
+  | 'key_import_failed'
+  | 'invalid_signature';
+
+export interface AgentCardTrustResult {
+  state: AgentCardTrustState;
+  reason: AgentCardTrustReason;
+  summary: string;
+  signatureCount: number;
+  verifiedSignatureIndex?: number;
+  algorithm?: string;
+  keyId?: string;
+  keyUrl?: string;
+}
+
+export interface AgentCardInspection {
+  card: AgentCard;
+  trust: AgentCardTrustResult;
+  validation: ValidationResult;
+}
+
+export interface AgentCardDocumentInspection {
+  card?: AgentCard;
+  trust: AgentCardTrustResult;
+  validation: ValidationResult;
+}
+
 export interface AgentRegistryEntry {
   card: AgentCard;
   online: boolean;
   lastSeen: string;
   validation: ValidationResult;
+  trust: AgentCardTrustResult;
 }
 
 export interface LocalAgentCard {
   filePath: string;
+  card?: AgentCard;
   validation: ValidationResult;
+  trust: AgentCardTrustResult;
 }
 
 export interface ValidationIssue {

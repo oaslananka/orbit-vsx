@@ -445,6 +445,15 @@
           "default": "**/{node_modules,.git,dist,out,coverage}/**",
           "description": "Glob used to exclude folders from local A2A agent-card scanning."
         },
+        "orbit.a2a.trustedJwksUrls": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "description": "Exact public HTTPS JWKS URLs trusted for local or registry Agent Card signature verification. Same-origin discovery JWKS URLs are trusted automatically."
+        },
         "orbit.mcp.explorer.enabled": {
           "type": "boolean",
           "default": true,
@@ -584,8 +593,8 @@
         ],
         "toolReferenceName": "orbitA2AAgents",
         "displayName": "Orbit A2A Agents",
-        "modelDescription": "Lists A2A agents from the configured registry with validated bounded summaries. Read-only.",
-        "userDescription": "List A2A agents.",
+        "modelDescription": "Lists A2A agents from the configured registry with bounded schema and signature-trust summaries. Read-only.",
+        "userDescription": "List A2A agents with trust status.",
         "canBeReferencedInPrompt": true,
         "icon": "$(circuit-board)",
         "inputSchema": {
@@ -610,8 +619,8 @@
         ],
         "toolReferenceName": "orbitA2ACardValidate",
         "displayName": "Orbit A2A Card Validate",
-        "modelDescription": "Validates an A2A Agent Card from JSON text or a safe public HTTPS URL. Provide exactly one of cardJson or url. Read-only.",
-        "userDescription": "Validate an A2A Agent Card.",
+        "modelDescription": "Validates an A2A Agent Card from JSON text or a safe public HTTPS URL and reports schema validity separately from JWS signature trust. Provide exactly one of cardJson or url. Read-only.",
+        "userDescription": "Validate an A2A Agent Card and inspect signature trust.",
         "canBeReferencedInPrompt": true,
         "icon": "$(verified)",
         "inputSchema": {

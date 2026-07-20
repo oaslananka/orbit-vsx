@@ -79,6 +79,19 @@ export function validateAgentRegistryEntryPayload(value: unknown, path = '$'): A
     lastSeen,
     online,
     validation: { valid: true, errors: [] },
+    trust: card.signatures?.length
+      ? {
+          reason: 'unsupported_algorithm',
+          signatureCount: card.signatures.length,
+          state: 'unverified',
+          summary: 'Agent Card signatures have not been cryptographically verified yet.',
+        }
+      : {
+          reason: 'no_signatures',
+          signatureCount: 0,
+          state: 'unsigned',
+          summary: 'Agent Card is unsigned.',
+        },
   };
 }
 

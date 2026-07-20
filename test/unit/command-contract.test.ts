@@ -66,6 +66,10 @@ const vscodeMock = {
   },
   workspace: {
     isTrusted: true,
+    fs: {
+      readFile: async (): Promise<Uint8Array> =>
+        Buffer.from(JSON.stringify({ name: 'agent' }), 'utf8'),
+    },
     getWorkspaceFolder: (): undefined => undefined,
   },
   window: {
@@ -309,25 +313,42 @@ suite('Command Contracts', () => {
     const calls: string[] = [];
     const provider = {
       getClient: () => ({
-        fetchAgentCard: async (url: string): Promise<unknown> => {
-          calls.push(`fetch:${url}`);
-          return { description: 'desc', name: 'agent', skills: [], version: '1.0.0' };
+        inspectAgentCard: async (url: string): Promise<unknown> => {
+          calls.push(`inspect:${url}`);
+          return {
+            card: { description: 'desc', name: 'agent', skills: [], version: '1.0.0' },
+            trust: {
+              reason: 'no_signatures',
+              signatureCount: 0,
+              state: 'unsigned',
+              summary: 'Agent Card is unsigned.',
+            },
+            validation: { errors: [], valid: true },
+          };
         },
         validateAgentCard: async (filePath: string): Promise<unknown> => {
           calls.push(`validate:${filePath}`);
           return { errors: [], valid: true };
         },
       }),
-      getDiagnosticCollection: () => ({
-        set: (_uri: unknown, diagnostics: unknown[]): void => {
-          diagnosticSets.push(diagnostics);
+      inspectAgentCardText: async (): Promise<unknown> => ({
+        card: { name: 'agent' },
+        trust: {
+          reason: 'no_signatures',
+          signatureCount: 0,
+          state: 'unsigned',
+          summary: 'Agent Card is unsigned.',
         },
+        validation: { errors: [], valid: true },
       }),
+      updateDocumentDiagnostics: (): void => {
+        diagnosticSets.push([]);
+      },
       openDetailWebview: (agentName: string): void => {
         calls.push(`detail:${agentName}`);
       },
-      openDetailWebviewFromCard: (card: { name: string }): void => {
-        calls.push(`card:${card.name}`);
+      openDetailWebviewFromInspection: (inspection: { card: { name: string } }): void => {
+        calls.push(`card:${inspection.card.name}`);
       },
       refresh: (): void => {
         calls.push('refresh');
@@ -343,11 +364,11 @@ suite('Command Contracts', () => {
     assert.strictEqual(diagnosticSets.length, 1);
     assert.deepStrictEqual(calls, [
       'validate:agent-card.json',
-      'fetch:https://example.com/agent.json',
+      'inspect:https://example.com/agent.json',
       'card:agent',
       'detail:agent',
     ]);
-    assert.strictEqual(informationMessages.length, 1);
+    assert.strictEqual(informationMessages.length, 2);
   });
 
   test('Should audit Agent Card network policy blocks without leaking URL secrets', async () => {
@@ -355,7 +376,7 @@ suite('Command Contracts', () => {
       createContext() as never,
       {
         getClient: () => ({
-          fetchAgentCard: async (): Promise<never> => {
+          inspectAgentCard: async (): Promise<never> => {
             throw new PublicNetworkPolicyError(
               'blocked_address',
               'Agent Card hostname resolved to a non-public address.'
