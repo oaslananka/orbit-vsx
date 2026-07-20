@@ -10,10 +10,14 @@ suite('Release Workflow Contracts', () => {
     const workflow = fs.readFileSync(RELEASE_WORKFLOW_PATH, 'utf8');
 
     assert.match(workflow, /fetch-depth:\s*0/);
-    assert.match(workflow, /permissions:\s*\n\s*contents: write\n/);
-    assert.ok(!workflow.includes('id-token: write'));
+    assert.match(workflow, /permissions:/);
+    assert.match(workflow, /contents: write/);
+    assert.match(workflow, /id-token: write/);
+    assert.match(workflow, /attestations: write/);
+    assert.match(workflow, /artifact-metadata: write/);
     assert.ok(workflow.includes('git merge-base --is-ancestor "$GITHUB_SHA" origin/main'));
     assert.ok(workflow.includes('tag_version="${GITHUB_REF_NAME#v}"'));
+    assert.ok(workflow.includes('sudo scripts/install-headless-deps.sh'));
     assert.ok(workflow.includes('xvfb-run -a corepack pnpm run verify'));
     assert.ok(workflow.includes('pnpm audit --audit-level moderate'));
 
