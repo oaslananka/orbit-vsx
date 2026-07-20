@@ -231,7 +231,7 @@ export class AgentCardTrustVerifier {
         { algorithm: alg, keyId: kid }
       );
     }
-    if (protectedHeader.typ !== undefined && protectedHeader.typ.toUpperCase() !== 'JOSE') {
+    if (protectedHeader.typ.toUpperCase() !== 'JOSE') {
       return signatureOutcome(
         'invalid',
         'invalid_typ',
@@ -418,7 +418,7 @@ export function canonicalizeJson(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map((item) => canonicalizeJson(item)).join(',')}]`;
   }
-  if (typeof value === 'object' && value !== null) {
+  if (typeof value === 'object') {
     const record = value as Record<string, unknown>;
     return `{${Object.keys(record)
       .sort()
