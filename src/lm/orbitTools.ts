@@ -62,6 +62,23 @@ const MAX_TEXT_LENGTH = 4000;
 const MAX_ERROR_TEXT_LENGTH = 1200;
 const MAX_COMMANDS = 20;
 const MAX_FIX_ATTEMPTS = 20;
+const MAX_OMITTED_PATHS = 40;
+
+interface ToolOutputBudget {
+  maxArrayItems: number;
+  maxObjectEntries: number;
+  maxStringLength: number;
+}
+
+const TOOL_OUTPUT_BUDGETS: ToolOutputBudget[] = [
+  { maxArrayItems: 25, maxObjectEntries: 50, maxStringLength: 1200 },
+  { maxArrayItems: 20, maxObjectEntries: 40, maxStringLength: 600 },
+  { maxArrayItems: 12, maxObjectEntries: 30, maxStringLength: 300 },
+  { maxArrayItems: 8, maxObjectEntries: 24, maxStringLength: 160 },
+  { maxArrayItems: 5, maxObjectEntries: 18, maxStringLength: 80 },
+  { maxArrayItems: 3, maxObjectEntries: 12, maxStringLength: 40 },
+  { maxArrayItems: 1, maxObjectEntries: 8, maxStringLength: 20 },
+];
 
 export function registerOrbitLanguageModelTools(
   context: vscode.ExtensionContext,
@@ -107,17 +124,29 @@ class GetMcpHealthTool implements vscode.LanguageModelTool<GetMcpHealthInput> {
   }
 
   async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<GetMcpHealthInput>
+    options: vscode.LanguageModelToolInvocationOptions<GetMcpHealthInput>,
+    token?: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
     assertWorkspaceTrusted();
+    throwIfCancellationRequested(token);
     recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_MCP_HEALTH, 'started');
     try {
       const dashboard =
-        options.input.refresh === false
-          ? this.healthProvider.getState().dashboard
-          : await this.healthProvider.getDashboard();
+        options.input.refresh === true
+          ? await this.healthProvider.refreshDashboard()
+          : options.input.refresh === false
+            ? this.healthProvider.getState().dashboard
+            : await this.healthProvider.getDashboard();
+      throwIfCancellationRequested(token);
       recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_MCP_HEALTH, 'success');
       return jsonToolResult({
+        count: dashboard.servers.length,
+        freshness:
+          options.input.refresh === true
+            ? 'refreshed'
+            : options.input.refresh === false
+              ? 'cache'
+              : 'cache-first',
         summary: dashboard.summary,
         servers: dashboard.servers.map((server) => summarizeMcpServer(server)),
       });
@@ -136,16 +165,20 @@ class ListMcpServersTool implements vscode.LanguageModelTool<ListMcpServersInput
   }
 
   async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<ListMcpServersInput>
+    options: vscode.LanguageModelToolInvocationOptions<ListMcpServersInput>,
+    token?: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
     assertWorkspaceTrusted();
+    throwIfCancellationRequested(token);
     const limit = boundedLimit(options.input.limit);
     recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.LIST_MCP_SERVERS, 'started');
     try {
       const dashboard = await this.healthProvider.getDashboard();
+      throwIfCancellationRequested(token);
       recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.LIST_MCP_SERVERS, 'success');
       return jsonToolResult({
         count: dashboard.servers.length,
+        returnedCount: Math.min(dashboard.servers.length, limit),
         servers: dashboard.servers
           .slice(0, limit)
           .map((server) => summarizeMcpServer(server, options.input.includePipelines === true)),
@@ -170,16 +203,20 @@ class SearchDebugSessionsTool implements vscode.LanguageModelTool<SearchDebugSes
   }
 
   async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<SearchDebugSessionsInput>
+    options: vscode.LanguageModelToolInvocationOptions<SearchDebugSessionsInput>,
+    token?: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
     assertWorkspaceTrusted();
+    throwIfCancellationRequested(token);
     const query = nonEmptyString(options.input.query, 'query');
     const limit = boundedLimit(options.input.limit);
     recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.SEARCH_DEBUG_SESSIONS, 'started');
     try {
       const result = await this.debugProvider.getClient().searchSessions(query);
+      throwIfCancellationRequested(token);
       recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.SEARCH_DEBUG_SESSIONS, 'success');
       return jsonToolResult({
+        returnedCount: Math.min(result.sessions.length, limit),
         sessions: result.sessions.slice(0, limit).map((session) => summarizeDebugSession(session)),
         total: result.total,
         truncated: result.sessions.length > limit,
@@ -203,9 +240,11 @@ class GetDebugSessionContextTool implements vscode.LanguageModelTool<GetDebugSes
   }
 
   async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<GetDebugSessionContextInput>
+    options: vscode.LanguageModelToolInvocationOptions<GetDebugSessionContextInput>,
+    token?: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
     assertWorkspaceTrusted();
+    throwIfCancellationRequested(token);
     const sessionId = nonEmptyString(options.input.sessionId, 'sessionId');
     recordToolAudit(
       ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_DEBUG_SESSION_CONTEXT,
@@ -214,6 +253,7 @@ class GetDebugSessionContextTool implements vscode.LanguageModelTool<GetDebugSes
     );
     try {
       const session = await this.debugProvider.getClient().getSessionContext(sessionId);
+      throwIfCancellationRequested(token);
       recordToolAudit(
         ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_DEBUG_SESSION_CONTEXT,
         'success',
@@ -239,17 +279,21 @@ class ListA2AAgentsTool implements vscode.LanguageModelTool<LimitInput> {
   }
 
   async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<LimitInput>
+    options: vscode.LanguageModelToolInvocationOptions<LimitInput>,
+    token?: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
     assertWorkspaceTrusted();
+    throwIfCancellationRequested(token);
     const limit = boundedLimit(options.input.limit);
     recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.LIST_A2A_AGENTS, 'started');
     try {
       const agents = await this.a2aProvider.getClient().listAgents();
+      throwIfCancellationRequested(token);
       recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.LIST_A2A_AGENTS, 'success');
       return jsonToolResult({
         agents: agents.slice(0, limit).map(summarizeAgentRegistryEntry),
         count: agents.length,
+        returnedCount: Math.min(agents.length, limit),
         truncated: agents.length > limit,
       });
     } catch (error) {
@@ -273,9 +317,11 @@ class ValidateAgentCardTool implements vscode.LanguageModelTool<ValidateAgentCar
   }
 
   async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<ValidateAgentCardInput>
+    options: vscode.LanguageModelToolInvocationOptions<ValidateAgentCardInput>,
+    token?: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
     assertWorkspaceTrusted();
+    throwIfCancellationRequested(token);
     const hasJson =
       typeof options.input.cardJson === 'string' && options.input.cardJson.trim().length > 0;
     const hasUrl = typeof options.input.url === 'string' && options.input.url.trim().length > 0;
@@ -299,6 +345,7 @@ class ValidateAgentCardTool implements vscode.LanguageModelTool<ValidateAgentCar
       }
 
       const card = await this.a2aProvider.getClient().fetchAgentCard(options.input.url ?? '');
+      throwIfCancellationRequested(token);
       recordToolAudit(
         ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
         'success',
@@ -328,9 +375,87 @@ function assertWorkspaceTrusted(): void {
 }
 
 function jsonToolResult(value: unknown): vscode.LanguageModelToolResult {
-  return new vscode.LanguageModelToolResult([
-    new vscode.LanguageModelTextPart(truncateText(JSON.stringify(value, null, 2), MAX_TEXT_LENGTH)),
-  ]);
+  const originalCharacters = JSON.stringify(value)?.length ?? 0;
+
+  for (const budget of TOOL_OUTPUT_BUDGETS) {
+    const omitted: string[] = [];
+    const bounded = boundJsonValue(value, '$', budget, omitted);
+    const uniqueOmissions = Array.from(new Set(omitted));
+    const omissionMetadata = uniqueOmissions.slice(0, MAX_OMITTED_PATHS);
+    if (uniqueOmissions.length > MAX_OMITTED_PATHS) {
+      omissionMetadata.push(
+        `$: ${uniqueOmissions.length - MAX_OMITTED_PATHS} additional omissions`
+      );
+    }
+    const body = isJsonObject(bounded) ? bounded : { value: bounded };
+    const serialized = JSON.stringify(
+      {
+        ...body,
+        _meta: {
+          characterLimit: MAX_TEXT_LENGTH,
+          omitted: omissionMetadata,
+          originalCharacters,
+          truncated: uniqueOmissions.length > 0 || originalCharacters > MAX_TEXT_LENGTH,
+        },
+      },
+      null,
+      2
+    );
+    if (serialized.length <= MAX_TEXT_LENGTH) {
+      return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(serialized)]);
+    }
+  }
+
+  const fallback = JSON.stringify(
+    {
+      _meta: {
+        characterLimit: MAX_TEXT_LENGTH,
+        omitted: ['$: payload omitted after exhausting deterministic output budgets'],
+        originalCharacters,
+        truncated: true,
+      },
+    },
+    null,
+    2
+  );
+  return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(fallback)]);
+}
+
+function boundJsonValue(
+  value: unknown,
+  path: string,
+  budget: ToolOutputBudget,
+  omitted: string[]
+): unknown {
+  if (typeof value === 'string') {
+    if (value.length <= budget.maxStringLength) return value;
+    omitted.push(`${path}: ${value.length - budget.maxStringLength} characters omitted`);
+    return `${value.slice(0, budget.maxStringLength)}…[truncated]`;
+  }
+  if (Array.isArray(value)) {
+    if (value.length > budget.maxArrayItems) {
+      omitted.push(`${path}: ${value.length - budget.maxArrayItems} array items omitted`);
+    }
+    return value
+      .slice(0, budget.maxArrayItems)
+      .map((item, index) => boundJsonValue(item, `${path}[${index}]`, budget, omitted));
+  }
+  if (isJsonObject(value)) {
+    const entries = Object.entries(value).filter(([, item]) => item !== undefined);
+    if (entries.length > budget.maxObjectEntries) {
+      omitted.push(`${path}: ${entries.length - budget.maxObjectEntries} object fields omitted`);
+    }
+    return Object.fromEntries(
+      entries
+        .slice(0, budget.maxObjectEntries)
+        .map(([key, item]) => [key, boundJsonValue(item, `${path}.${key}`, budget, omitted)])
+    );
+  }
+  return value;
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function recordToolAudit(
@@ -358,7 +483,9 @@ function summarizeMcpServer(server: McpServer, includePipelines = false): Record
     url: redactUrl(server.url),
   };
   if (includePipelines && server.pipelineGroups) {
+    summary.pipelineGroupCount = server.pipelineGroups.length;
     summary.pipelineGroups = server.pipelineGroups.slice(0, MAX_LIMIT);
+    summary.pipelineGroupsTruncated = server.pipelineGroups.length > MAX_LIMIT;
   }
   return summary;
 }
@@ -371,7 +498,9 @@ function summarizeDebugSession(
     createdAt: session.createdAt,
     id: session.id,
     status: session.status,
+    tagCount: session.tags.length,
     tags: session.tags.slice(0, MAX_LIMIT),
+    tagsTruncated: session.tags.length > MAX_LIMIT,
     title: session.title,
     updatedAt: session.updatedAt,
   };
@@ -379,6 +508,10 @@ function summarizeDebugSession(
     summary.description = truncateText(session.description, MAX_ERROR_TEXT_LENGTH);
   if (session.errorText) summary.errorText = truncateText(session.errorText, MAX_ERROR_TEXT_LENGTH);
   if (includeDetails) {
+    summary.fixAttemptCount = session.fixAttempts.length;
+    summary.fixAttemptsTruncated = session.fixAttempts.length > MAX_FIX_ATTEMPTS;
+    summary.terminalCommandCount = session.terminalCommands.length;
+    summary.terminalCommandsTruncated = session.terminalCommands.length > MAX_COMMANDS;
     summary.fixAttempts = session.fixAttempts.slice(0, MAX_FIX_ATTEMPTS).map((fix) => ({
       description: truncateText(fix.description, 500),
       id: fix.id,
@@ -428,24 +561,30 @@ function summarizeAgentCard(card: AgentCard): Record<string, unknown> {
           ])
         )
       : undefined,
+    skillCount: card.skills.length,
     skills: card.skills.slice(0, MAX_LIMIT).map((skill) => ({
       description: truncateText(skill.description, 500),
       id: skill.id,
       name: skill.name,
       tags: skill.tags.slice(0, MAX_LIMIT),
     })),
+    skillsTruncated: card.skills.length > MAX_LIMIT,
+    supportedInterfaceCount: card.supportedInterfaces.length,
     supportedInterfaces: card.supportedInterfaces.slice(0, MAX_LIMIT).map((agentInterface) => ({
       protocolBinding: agentInterface.protocolBinding,
       protocolVersion: agentInterface.protocolVersion,
       url: redactUrl(agentInterface.url),
     })),
+    supportedInterfacesTruncated: card.supportedInterfaces.length > MAX_LIMIT,
     version: card.version,
   };
 }
 
 function summarizeValidation(validation: ValidationResult): Record<string, unknown> {
   return {
+    errorCount: validation.errors.length,
     errors: validation.errors.slice(0, MAX_LIMIT).map((error) => truncateText(error, 500)),
+    errorsTruncated: validation.errors.length > MAX_LIMIT,
     valid: validation.valid,
   };
 }
@@ -465,6 +604,12 @@ function nonEmptyString(value: unknown, fieldName: string): string {
 function truncateText(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength)}…[truncated]`;
+}
+
+function throwIfCancellationRequested(token?: vscode.CancellationToken): void {
+  if (token?.isCancellationRequested) {
+    throw new Error('Orbit tool invocation was cancelled.');
+  }
 }
 
 function asToolError(error: unknown): Error {
