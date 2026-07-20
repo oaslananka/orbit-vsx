@@ -81,6 +81,15 @@ function validAgentCard(): Record<string, unknown> {
   };
 }
 
+function unsignedTrust(): Record<string, unknown> {
+  return {
+    reason: 'no_signatures',
+    signatureCount: 0,
+    state: 'unsigned',
+    summary: 'Agent Card is unsigned.',
+  };
+}
+
 suite('Language Model Tools', () => {
   let orbitTools: typeof OrbitToolsModule;
 
@@ -118,15 +127,25 @@ suite('Language Model Tools', () => {
     const providers = {
       a2aProvider: {
         getClient: () => ({
-          fetchAgentCard: async (): Promise<Record<string, unknown>> => validAgentCard(),
+          inspectAgentCard: async (): Promise<Record<string, unknown>> => ({
+            card: validAgentCard(),
+            trust: unsignedTrust(),
+            validation: { errors: [], valid: true },
+          }),
           listAgents: async (): Promise<unknown[]> => [
             {
               card: validAgentCard(),
               lastSeen: '2026-06-24T00:00:00.000Z',
               online: true,
+              trust: unsignedTrust(),
               validation: { errors: [], valid: true },
             },
           ],
+        }),
+        inspectAgentCardText: async (): Promise<Record<string, unknown>> => ({
+          card: validAgentCard(),
+          trust: unsignedTrust(),
+          validation: { errors: [], valid: true },
         }),
       },
       debugProvider: {

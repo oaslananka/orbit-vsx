@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import type { A2AProvider } from '../panels/a2a/A2AProvider';
-import { validateAgentCardText } from '../panels/a2a/agentCardValidation';
 import type {
   AgentCard,
+  AgentCardTrustResult,
   AgentRegistryEntry,
   SecurityScheme,
   ValidationResult,
@@ -333,24 +333,37 @@ class ValidateAgentCardTool implements vscode.LanguageModelTool<ValidateAgentCar
     );
     try {
       if (hasJson) {
-        const validation = validateAgentCardText(options.input.cardJson ?? '');
+        const inspection = await this.a2aProvider.inspectAgentCardText(
+          options.input.cardJson ?? ''
+        );
+        throwIfCancellationRequested(token);
         recordToolAudit(
           ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
-          validation.valid ? 'success' : 'failure'
+          inspection.validation.valid ? 'success' : 'failure',
+          undefined,
+          `trust:${inspection.trust.state}`
         );
-        return jsonToolResult({ validation: summarizeValidation(validation) });
+        return jsonToolResult({
+          card: inspection.card ? summarizeAgentCard(inspection.card) : undefined,
+          trust: summarizeAgentCardTrust(inspection.trust),
+          validation: summarizeValidation(inspection.validation),
+        });
       }
 
-      const card = await this.a2aProvider.getClient().fetchAgentCard(options.input.url ?? '');
+      const inspection = await this.a2aProvider
+        .getClient()
+        .inspectAgentCard(options.input.url ?? '');
       throwIfCancellationRequested(token);
       recordToolAudit(
         ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
         'success',
-        options.input.url ? { kind: 'url', value: options.input.url } : undefined
+        options.input.url ? { kind: 'url', value: options.input.url } : undefined,
+        `trust:${inspection.trust.state}`
       );
       return jsonToolResult({
-        card: summarizeAgentCard(card),
-        validation: { errors: [], valid: true },
+        card: summarizeAgentCard(inspection.card),
+        trust: summarizeAgentCardTrust(inspection.trust),
+        validation: summarizeValidation(inspection.validation),
       });
     } catch (error) {
       const policyError = isPublicNetworkPolicyError(error) ? error : undefined;
@@ -529,7 +542,21 @@ function summarizeAgentRegistryEntry(entry: AgentRegistryEntry): Record<string, 
     card: summarizeAgentCard(entry.card),
     lastSeen: entry.lastSeen,
     online: entry.online,
+    trust: summarizeAgentCardTrust(entry.trust),
     validation: summarizeValidation(entry.validation),
+  };
+}
+
+function summarizeAgentCardTrust(trust: AgentCardTrustResult): Record<string, unknown> {
+  return {
+    algorithm: trust.algorithm,
+    keyId: trust.keyId ? truncateText(trust.keyId, 256) : undefined,
+    keyUrl: trust.keyUrl ? redactUrl(trust.keyUrl) : undefined,
+    reason: trust.reason,
+    signatureCount: trust.signatureCount,
+    state: trust.state,
+    summary: truncateText(trust.summary, 500),
+    verifiedSignatureIndex: trust.verifiedSignatureIndex,
   };
 }
 

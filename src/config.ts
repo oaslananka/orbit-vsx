@@ -27,6 +27,7 @@ export interface OrbitConfig {
     autoValidateOnSave: boolean;
     localCardScanLimit: number;
     localCardExcludeGlob: string;
+    trustedJwksUrls: string[];
   };
   mcpExplorer: {
     enabled: boolean;
@@ -45,6 +46,26 @@ function readHttpEndpoint(
     allowPrivateNetwork: true,
     label,
   });
+}
+
+function readTrustedJwksUrls(config: vscode.WorkspaceConfiguration): string[] {
+  const values = config.get<string[]>(CONFIG_KEYS.A2A_TRUSTED_JWKS_URLS, []);
+  return Array.from(
+    new Set(
+      values.map((value) => {
+        const normalized = normalizeHttpUrl(value, {
+          allowLocalhost: false,
+          allowPrivateNetwork: false,
+          label: 'Trusted A2A JWKS URL',
+        });
+        const parsed = new URL(normalized);
+        if (parsed.protocol !== 'https:') {
+          throw new Error('Trusted A2A JWKS URLs must use HTTPS.');
+        }
+        return parsed.toString();
+      })
+    )
+  );
 }
 
 export function readConfig(): OrbitConfig {
@@ -94,6 +115,7 @@ export function readConfig(): OrbitConfig {
         CONFIG_KEYS.A2A_LOCAL_CARD_EXCLUDE_GLOB,
         '**/{node_modules,.git,dist,out,coverage}/**'
       ),
+      trustedJwksUrls: readTrustedJwksUrls(config),
     },
     mcpExplorer: {
       enabled: config.get<boolean>(CONFIG_KEYS.MCP_EXPLORER_ENABLED, true),

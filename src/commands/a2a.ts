@@ -63,21 +63,23 @@ export function registerA2ACommands(
           outcome: result.valid ? 'success' : 'failure',
           target: { kind: 'path', value: filePath },
         });
-        const diagnostics: vscode.Diagnostic[] = result.errors.map((msg) => {
-          const diag = new vscode.Diagnostic(
-            new vscode.Range(0, 0, 0, 0),
-            msg,
-            vscode.DiagnosticSeverity.Error
-          );
-          diag.source = 'Orbit A2A';
-          return diag;
+        const bytes = await vscode.workspace.fs.readFile(targetUri);
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+        const inspection = await a2aProvider.inspectAgentCardText(text);
+        a2aProvider.updateDocumentDiagnostics(targetUri, text, inspection, result.errors);
+
+        recordAuditEvent({
+          surface: 'a2a',
+          operation: 'verify_agent_card_signature',
+          outcome: inspection.trust.state === 'verified' ? 'success' : 'failure',
+          target: { kind: 'path', value: filePath },
+          detail: `trust:${inspection.trust.state}`,
         });
 
-        const collection = a2aProvider.getDiagnosticCollection();
-        collection.set(targetUri, diagnostics);
-
-        if (result.valid) {
-          vscode.window.showInformationMessage('Agent card is valid.');
+        if (result.valid && inspection.validation.valid) {
+          vscode.window.showInformationMessage(
+            `Agent card schema is valid; signature trust is ${inspection.trust.state}.`
+          );
         } else {
           const count = result.errors.length;
           vscode.window.showWarningMessage(
@@ -115,14 +117,31 @@ export function registerA2ACommands(
           outcome: 'started',
           target: { kind: 'url', value: url },
         });
-        const card = await a2aProvider.getClient().fetchAgentCard(url);
+        const inspection = await a2aProvider.getClient().inspectAgentCard(url);
         recordAuditEvent({
           surface: 'network',
           operation: 'discover_agent_card',
           outcome: 'success',
           target: { kind: 'url', value: url },
+          detail: `trust:${inspection.trust.state}`,
         });
-        a2aProvider.openDetailWebviewFromCard(card);
+        recordAuditEvent({
+          surface: 'a2a',
+          operation: 'verify_agent_card_signature',
+          outcome:
+            inspection.trust.state === 'verified' || inspection.trust.state === 'unsigned'
+              ? 'success'
+              : inspection.trust.reason === 'untrusted_key_url' ||
+                  inspection.trust.reason === 'unsafe_algorithm'
+                ? 'blocked'
+                : 'failure',
+          target: { kind: 'url', value: url },
+          detail: `trust:${inspection.trust.state}`,
+        });
+        a2aProvider.openDetailWebviewFromInspection(inspection);
+        vscode.window.showInformationMessage(
+          `Discovered ${inspection.card.name}; signature trust is ${inspection.trust.state}.`
+        );
       } catch (error) {
         const policyError = isPublicNetworkPolicyError(error) ? error : undefined;
         recordAuditEvent({

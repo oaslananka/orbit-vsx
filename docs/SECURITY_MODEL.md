@@ -90,6 +90,44 @@ A2A validation checks:
 - signatures metadata shape when present;
 - absence of credential-looking fields.
 
+### Agent Card signature trust
+
+Schema validity and signature trust are independent results. A schema-valid card may
+still be unsigned, may use an unavailable key, or may contain an invalid signature.
+Orbit exposes the following trust states in the A2A tree, detail webview, local
+diagnostics, Language Model Tools, and audit qualifiers:
+
+- `unsigned`: no signatures were supplied;
+- `unverified`: a signature exists but uses a safe algorithm or critical header Orbit
+  does not currently support;
+- `verified`: at least one ES256 or RS256 JWS signature verifies against the RFC 8785
+  canonical Agent Card payload;
+- `invalid`: the protected header, algorithm, canonical payload, or signature is unsafe,
+  malformed, conflicting, or cryptographically invalid;
+- `key-unavailable`: the protected key URL is missing, untrusted, unavailable, or the
+  matching key is absent, expired, revoked, inactive, incompatible, or not authorized
+  for verification.
+
+Verification excludes the `signatures` field, omits empty optional repeated fields
+according to A2A field-presence rules, and canonicalizes the remaining JSON with RFC 8785. Orbit rejects non-finite numbers and unpaired Unicode surrogates before signature
+verification. The protected JWS header must contain `alg`, `typ: JOSE`, and `kid`.
+`none` and symmetric `HS*` algorithms are rejected; the current asymmetric allowlist is
+ES256 and RS256. Raw signature bytes, protected headers, and JWK material are never
+written to `Orbit:Audit`.
+
+A discovered card may resolve a public HTTPS JWKS URL only when it is same-origin with
+the discovered Agent Card URL. Local and registry cards require the exact key URL in
+`orbit.a2a.trustedJwksUrls`. JWKS redirects are disabled, responses are bounded, and
+DNS/private-address protections are inherited from the hardened public JSON fetcher.
+Successfully parsed JWKS responses are cached for five minutes; failures are not
+cached. Expired, revoked, inactive, private, symmetric, algorithm-mismatched, or
+non-verification keys are never used.
+
+`verified` means payload integrity was proven under a key allowed by this local policy.
+It is not an independent endorsement of the organization controlling the agent, domain,
+or key. Operators remain responsible for deciding which JWKS URLs and provider domains
+they trust.
+
 ## Audit log
 
 Orbit writes security-relevant user actions to the `Orbit:Audit` output channel.
@@ -105,6 +143,7 @@ Current audited surfaces:
 | MCP/Health  | `register_server`, `unregister_server`, `check_all`            |
 | Debug       | `start_debug_session`, `close_debug_session`, `record_command` |
 | A2A network | `discover_agent_card`                                          |
+| A2A trust   | `verify_agent_card_signature`                                  |
 | A2A CLI     | `validate_agent_card`, `scaffold_agent`                        |
 
 The transport prevents DNS rebinding between policy evaluation and connection by
@@ -120,7 +159,7 @@ Audit event fields:
 - `outcome`: `started`, `success`, `failure`, or `blocked`;
 - `target_kind`: declared target type: `url`, `path`, `server`, `session`, or `identifier`;
 - `target`: URL-redacted value or a sanitized non-URL identifier appropriate to `target_kind`;
-- `detail`: small non-secret qualifier such as adapter type.
+- `detail`: small non-secret qualifier such as adapter type or `trust:<state>`.
 
 All audit fields remove control characters, collapse whitespace, encode field separators,
 and enforce length limits so external values cannot inject extra lines or fields. The

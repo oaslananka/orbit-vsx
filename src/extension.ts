@@ -17,7 +17,6 @@ import { disposeAuditChannel } from './utils/audit';
 import { readConfig } from './config';
 import { initializeOrbitSecrets, registerSecretCommands } from './secrets';
 import { isWorkspaceTrusted } from './utils/workspaceTrust';
-import { validateAgentCardText } from './panels/a2a/agentCardValidation';
 import { registerNativeMcpProvider } from './mcp/nativeMcpProvider';
 import { registerOrbitLanguageModelTools } from './lm/orbitTools';
 
@@ -175,19 +174,10 @@ export function activate(context: vscode.ExtensionContext): void {
       a2aProvider
         .getClient()
         .validateAgentCard(uri.fsPath)
-        .then((result) => {
-          const schemaResult = validateAgentCardText(document.getText());
-          const errors = [...schemaResult.errors, ...result.errors];
-          const diagnostics: vscode.Diagnostic[] = errors.map((msg) => {
-            const diag = new vscode.Diagnostic(
-              new vscode.Range(0, 0, Math.max(document.lineCount - 1, 0), 1),
-              msg,
-              vscode.DiagnosticSeverity.Error
-            );
-            diag.source = 'Orbit A2A';
-            return diag;
-          });
-          a2aProvider.getDiagnosticCollection().set(uri, diagnostics);
+        .then(async (result) => {
+          const text = document.getText();
+          const inspection = await a2aProvider.inspectAgentCardText(text);
+          a2aProvider.updateDocumentDiagnostics(uri, text, inspection, result.errors);
         })
         .catch(() => {
           a2aProvider.getDiagnosticCollection().delete(uri);

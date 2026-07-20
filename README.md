@@ -40,7 +40,9 @@ record terminal commands, fix attempts, and session context while you work.
 ### A2A Explorer
 
 Browse an A2A registry, inspect agent cards, validate `agent-card.json` files on
-save, and scaffold agents through the configured `a2a-warp` CLI.
+save, and scaffold agents through the configured `a2a-warp` CLI. Orbit reports
+schema validity separately from signature trust (`unsigned`, `unverified`,
+`verified`, `invalid`, or `key-unavailable`).
 
 ### MCP Explorer
 
@@ -104,6 +106,7 @@ first-run settings are:
 | `Orbit: Debug: Set Debug Token`   | Stores the optional `debug-recorder-mcp` bearer token in VS Code SecretStorage. |
 | `orbit.a2a.registryUrl`           | Base URL for the A2A registry server.                                           |
 | `orbit.a2a.cliPath`               | Executable name or absolute path for `a2a-warp`.                                |
+| `orbit.a2a.trustedJwksUrls`       | Exact public HTTPS JWKS URLs trusted for local or registry card verification.   |
 
 Example workspace settings:
 

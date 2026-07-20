@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { COMMAND_IDS } from '../../constants';
 import { getNonce, getWebviewUri, renderOrbitWebviewHtml } from '../../utils/webview';
 import { executeAllowedWebviewCommand, getWebviewClipboardText } from '../../utils/webviewMessages';
-import type { AgentCard } from './types';
+import type { AgentCardInspection } from './types';
 
 const A2A_WEBVIEW_COMMANDS = new Set<string>([
   COMMAND_IDS.A2A_DISCOVER,
@@ -10,10 +10,13 @@ const A2A_WEBVIEW_COMMANDS = new Set<string>([
   COMMAND_IDS.A2A_SCAFFOLD,
 ]);
 
-export function createA2ADetailWebview(context: vscode.ExtensionContext, card: AgentCard): void {
+export function createA2ADetailWebview(
+  context: vscode.ExtensionContext,
+  inspection: AgentCardInspection
+): void {
   const panel = vscode.window.createWebviewPanel(
     'orbit.a2a.detail',
-    `${card.name} — Agent Card`,
+    `${inspection.card.name} — Agent Card`,
     vscode.ViewColumn.One,
     {
       enableScripts: true,
@@ -30,11 +33,11 @@ export function createA2ADetailWebview(context: vscode.ExtensionContext, card: A
   const nonce = getNonce();
 
   panel.webview.html = renderOrbitWebviewHtml({
-    title: `${card.name} — Agent Card`,
+    title: `${inspection.card.name} — Agent Card`,
     webview: panel.webview,
     scriptUri,
     nonce,
-    initialData: card,
+    initialData: inspection,
   });
 
   panel.webview.onDidReceiveMessage((message: unknown) => {

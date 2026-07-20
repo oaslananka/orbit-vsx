@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { EmptyState } from '../components/EmptyState';
 
@@ -12,38 +12,67 @@ interface AgentSkill {
   id: string;
   name: string;
   description: string;
+  tags: string[];
+}
+
+interface AgentInterface {
+  protocolBinding: string;
+  protocolVersion: string;
+  url: string;
 }
 
 interface AgentCard {
   name: string;
   description: string;
   version: string;
-  url?: string;
+  supportedInterfaces: AgentInterface[];
+  defaultInputModes: string[];
+  defaultOutputModes: string[];
   skills: AgentSkill[];
+  signatures?: Array<{ protected: string; signature: string; header?: Record<string, unknown> }>;
 }
 
-interface AgentRegistryEntry {
+type TrustState = 'unsigned' | 'unverified' | 'verified' | 'invalid' | 'key-unavailable';
+
+interface AgentCardTrustResult {
+  state: TrustState;
+  reason: string;
+  summary: string;
+  signatureCount: number;
+  verifiedSignatureIndex?: number;
+  algorithm?: string;
+  keyId?: string;
+  keyUrl?: string;
+}
+
+interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+interface AgentCardInspection {
   card: AgentCard;
-  online: boolean;
-  lastSeen: string;
+  trust: AgentCardTrustResult;
+  validation: ValidationResult;
 }
 
-interface A2APayload {
-  agents: AgentRegistryEntry[];
-  localCards: string[];
+declare global {
+  interface Window {
+    __ORBIT_DATA__?: AgentCardInspection;
+  }
 }
 
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : null;
 
 function App(): React.ReactElement {
-  const [payload, setPayload] = useState<A2APayload | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [inspection, setInspection] = useState<AgentCardInspection | null>(
+    window.__ORBIT_DATA__ ?? null
+  );
 
   const handleMessage = useCallback((event: MessageEvent) => {
-    const message = event.data;
+    const message = event.data as { type?: string; payload?: AgentCardInspection };
     if (message.type === 'update' && message.payload) {
-      setPayload(message.payload);
-      setLoading(false);
+      setInspection(message.payload);
     }
   }, []);
 
@@ -52,21 +81,13 @@ function App(): React.ReactElement {
     return () => window.removeEventListener('message', handleMessage);
   }, [handleMessage]);
 
-  if (loading) {
-    return (
-      <div style={styles.container}>
-        <p>Loading agents...</p>
-      </div>
-    );
-  }
-
-  if (!payload || (payload.agents.length === 0 && payload.localCards.length === 0)) {
+  if (!inspection) {
     return (
       <div style={styles.container}>
         <EmptyState
           icon="graph"
           title="No agents found"
-          description="Discover agents from a URL or scaffold a new one."
+          description="Discover an Agent Card to inspect its schema and signature trust."
           actionLabel="Discover Agent"
           onAction={() => vscode?.postMessage({ type: 'command', command: 'orbit.a2a.discover' })}
         />
@@ -74,97 +95,258 @@ function App(): React.ReactElement {
     );
   }
 
+  const { card, trust, validation } = inspection;
+  const trustTone = trustToneFor(trust.state);
+
   return (
-    <div style={styles.container}>
-      {payload.agents.length > 0 && (
-        <>
-          <div style={styles.sectionTitle}>Registry Agents</div>
-          {payload.agents.map((entry) => (
-            <div
-              key={entry.card.name}
-              style={styles.card}
-              onClick={() =>
-                vscode?.postMessage({
-                  type: 'command',
-                  command: 'orbit.a2a.openCard',
-                  data: { agentName: entry.card.name },
-                })
-              }
-            >
-              <div style={styles.cardHeader}>
-                <span
-                  style={{
-                    ...styles.statusDot,
-                    background: entry.online
-                      ? 'var(--vscode-charts-green)'
-                      : 'var(--vscode-charts-red)',
-                  }}
-                />
-                <strong>{entry.card.name}</strong>
-                <span style={styles.version}>v{entry.card.version}</span>
-              </div>
-              <p style={styles.description}>{entry.card.description}</p>
-            </div>
-          ))}
-        </>
+    <main style={styles.container}>
+      <header style={styles.header}>
+        <div>
+          <div style={styles.eyebrow}>A2A Agent Card</div>
+          <h1 style={styles.title}>{card.name}</h1>
+          <p style={styles.description}>{card.description}</p>
+        </div>
+        <button
+          type="button"
+          style={styles.button}
+          onClick={() =>
+            vscode?.postMessage({
+              type: 'clipboard',
+              text: JSON.stringify(card, null, 2),
+            })
+          }
+        >
+          Copy JSON
+        </button>
+      </header>
+
+      <section style={styles.statusGrid} aria-label="Agent Card verification status">
+        <div style={styles.statusCard}>
+          <span style={styles.statusLabel}>Schema</span>
+          <strong>{validation.valid ? 'Valid' : 'Invalid'}</strong>
+          <span style={styles.statusDetail}>
+            {validation.valid
+              ? 'A2A structure passed validation.'
+              : `${validation.errors.length} schema issue${validation.errors.length === 1 ? '' : 's'}`}
+          </span>
+        </div>
+        <div style={{ ...styles.statusCard, borderLeftColor: trustTone }}>
+          <span style={styles.statusLabel}>Signature trust</span>
+          <strong style={{ color: trustTone }}>{trustLabel(trust.state)}</strong>
+          <span style={styles.statusDetail}>{trust.summary}</span>
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>Verification details</h2>
+        <dl style={styles.definitionGrid}>
+          <Definition label="Version" value={card.version} />
+          <Definition label="Signatures" value={String(trust.signatureCount)} />
+          <Definition label="Reason" value={trust.reason} />
+          <Definition label="Algorithm" value={trust.algorithm ?? 'not available'} />
+          <Definition label="Key ID" value={trust.keyId ?? 'not available'} />
+          <Definition label="JWKS" value={trust.keyUrl ?? 'not available'} />
+        </dl>
+        <p style={styles.note}>
+          “Verified” confirms integrity under a key allowed by Orbit’s JWKS policy. It does not
+          independently endorse the organization operating that key.
+        </p>
+      </section>
+
+      {validation.errors.length > 0 && (
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Schema findings</h2>
+          <ul style={styles.list}>
+            {validation.errors.map((error) => (
+              <li key={error}>{error}</li>
+            ))}
+          </ul>
+        </section>
       )}
 
-      {payload.localCards.length > 0 && (
-        <>
-          <div style={styles.sectionTitle}>Local Cards</div>
-          {payload.localCards.map((fp) => (
-            <div key={fp} style={styles.card}>
-              <span>{fp}</span>
-            </div>
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>Interfaces</h2>
+        <div style={styles.cards}>
+          {card.supportedInterfaces.map((agentInterface) => (
+            <article
+              key={`${agentInterface.protocolBinding}:${agentInterface.url}`}
+              style={styles.itemCard}
+            >
+              <strong>{agentInterface.protocolBinding}</strong>
+              <span style={styles.muted}>Protocol {agentInterface.protocolVersion}</span>
+              <code style={styles.code}>{agentInterface.url}</code>
+            </article>
           ))}
-        </>
-      )}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>Skills</h2>
+        <div style={styles.cards}>
+          {card.skills.map((skill) => (
+            <article key={skill.id} style={styles.itemCard}>
+              <strong>{skill.name}</strong>
+              <span style={styles.muted}>{skill.description}</span>
+              <span style={styles.tags}>{skill.tags.join(' · ')}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <h2 style={styles.sectionTitle}>Media modes</h2>
+        <dl style={styles.definitionGrid}>
+          <Definition label="Input" value={card.defaultInputModes.join(', ')} />
+          <Definition label="Output" value={card.defaultOutputModes.join(', ')} />
+        </dl>
+      </section>
+    </main>
+  );
+}
+
+function Definition({ label, value }: { label: string; value: string }): React.ReactElement {
+  return (
+    <div style={styles.definitionItem}>
+      <dt style={styles.statusLabel}>{label}</dt>
+      <dd style={styles.definitionValue}>{value}</dd>
     </div>
   );
 }
 
+function trustLabel(state: TrustState): string {
+  switch (state) {
+    case 'key-unavailable':
+      return 'Key unavailable';
+    case 'verified':
+      return 'Verified';
+    case 'invalid':
+      return 'Invalid';
+    case 'unverified':
+      return 'Unverified';
+    default:
+      return 'Unsigned';
+  }
+}
+
+function trustToneFor(state: TrustState): string {
+  switch (state) {
+    case 'verified':
+      return 'var(--vscode-testing-iconPassed)';
+    case 'invalid':
+      return 'var(--vscode-testing-iconFailed)';
+    case 'key-unavailable':
+    case 'unverified':
+      return 'var(--vscode-editorWarning-foreground)';
+    default:
+      return 'var(--vscode-descriptionForeground)';
+  }
+}
+
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: '8px',
+    padding: '24px',
     fontFamily: 'var(--vscode-font-family)',
     color: 'var(--vscode-editor-foreground)',
     background: 'var(--vscode-editor-background)',
     minHeight: '100vh',
+    boxSizing: 'border-box',
   },
-  sectionTitle: {
-    fontWeight: 600,
-    fontSize: '0.85em',
-    textTransform: 'uppercase',
-    opacity: 0.6,
-    padding: '8px 8px 4px',
-  },
-  card: {
-    padding: '8px 12px',
-    marginBottom: '2px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  },
-  cardHeader: {
+  header: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    marginBottom: '4px',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '24px',
+    marginBottom: '24px',
   },
-  statusDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    display: 'inline-block',
-    flexShrink: 0,
+  eyebrow: {
+    color: 'var(--vscode-descriptionForeground)',
+    fontSize: '0.78rem',
+    fontWeight: 600,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
   },
-  version: { opacity: 0.5, fontSize: '0.85em' },
-  description: { margin: 0, fontSize: '0.85em', opacity: 0.7 },
+  title: { margin: '4px 0 8px', fontSize: '1.8rem' },
+  description: { margin: 0, color: 'var(--vscode-descriptionForeground)', maxWidth: '72ch' },
+  button: {
+    border: '1px solid var(--vscode-button-border, transparent)',
+    borderRadius: '3px',
+    padding: '7px 12px',
+    color: 'var(--vscode-button-foreground)',
+    background: 'var(--vscode-button-background)',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  statusGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '12px',
+    marginBottom: '20px',
+  },
+  statusCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '5px',
+    padding: '14px',
+    border: '1px solid var(--vscode-panel-border)',
+    borderLeft: '4px solid var(--vscode-descriptionForeground)',
+    borderRadius: '4px',
+    background: 'var(--vscode-sideBar-background)',
+  },
+  statusLabel: {
+    color: 'var(--vscode-descriptionForeground)',
+    fontSize: '0.76rem',
+    fontWeight: 600,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+  },
+  statusDetail: { color: 'var(--vscode-descriptionForeground)', fontSize: '0.86rem' },
+  section: {
+    marginTop: '18px',
+    paddingTop: '16px',
+    borderTop: '1px solid var(--vscode-panel-border)',
+  },
+  sectionTitle: { margin: '0 0 12px', fontSize: '1rem' },
+  definitionGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gap: '10px',
+    margin: 0,
+  },
+  definitionItem: {
+    minWidth: 0,
+    padding: '10px',
+    borderRadius: '4px',
+    background: 'var(--vscode-textCodeBlock-background)',
+  },
+  definitionValue: { margin: '5px 0 0', overflowWrap: 'anywhere' },
+  note: {
+    margin: '12px 0 0',
+    color: 'var(--vscode-descriptionForeground)',
+    fontSize: '0.82rem',
+  },
+  cards: { display: 'grid', gap: '8px' },
+  itemCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '5px',
+    padding: '12px',
+    border: '1px solid var(--vscode-panel-border)',
+    borderRadius: '4px',
+  },
+  muted: { color: 'var(--vscode-descriptionForeground)' },
+  code: {
+    padding: '4px 6px',
+    borderRadius: '3px',
+    overflowWrap: 'anywhere',
+    background: 'var(--vscode-textCodeBlock-background)',
+  },
+  tags: { color: 'var(--vscode-textLink-foreground)', fontSize: '0.82rem' },
+  list: { margin: 0, paddingLeft: '20px' },
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  const rootEl = document.getElementById('root');
-  if (rootEl) {
-    const root = createRoot(rootEl);
-    root.render(<App />);
+  const rootElement = document.getElementById('root');
+  if (rootElement) {
+    createRoot(rootElement).render(<App />);
   }
 });
