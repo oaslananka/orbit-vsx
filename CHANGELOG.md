@@ -10,6 +10,9 @@
 
 - Reject unsafe, malformed, tampered, expired, revoked, incompatible, and untrusted Agent Card signature inputs without logging raw signatures or key material.
 - Pin all vulnerable `brace-expansion` major lines to the first patched releases for GHSA-3jxr-9vmj-r5cp / CVE-2026-13149.
+- Upgrade the forced `js-yaml` line to 5.2.1 for GHSA-g796-fgmg-93mv and GHSA-724g-mxrg-4qvm; scope workflow write permissions to individual jobs and run Semgrep from an immutable container digest.
+- Add property-based fuzz coverage for arbitrary canonical JSON values and object insertion-order invariance.
+- Preserve prototype-like JSON keys such as `__proto__` as own properties during Agent Card canonicalization instead of allowing JavaScript prototype setters to drop signed fields.
 
 ## [0.6.0] - 2026-07-20
 

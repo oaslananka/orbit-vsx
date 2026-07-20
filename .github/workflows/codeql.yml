@@ -12,13 +12,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
-  security-events: write
+permissions: read-all
 
 jobs:
   analyze:
     if: github.repository_owner == 'oaslananka'
+    permissions:
+      contents: read
+      security-events: write
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

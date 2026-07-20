@@ -487,7 +487,7 @@ function asCanonicalJsonValue(value: unknown): JsonValue {
 
   const record = asJsonRecord(value);
   if (!record) throw new Error(`Unsupported JCS value type: ${typeof value}`);
-  const output: { [key: string]: JsonValue } = {};
+  const output = Object.create(null) as { [key: string]: JsonValue };
   for (const [key, child] of Object.entries(record)) {
     assertWellFormedUnicode(key);
     output[key] = asCanonicalJsonValue(child);
@@ -533,7 +533,7 @@ function prepareAgentCardObject(
   path: string,
   root: boolean
 ): { [key: string]: JsonValue } {
-  const output: { [key: string]: JsonValue } = {};
+  const output = Object.create(null) as { [key: string]: JsonValue };
   for (const [key, child] of Object.entries(value)) {
     if (root && key === 'signatures') continue;
     if (child === undefined) continue;
