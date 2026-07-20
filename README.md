@@ -17,7 +17,7 @@ Install Orbit from the VS Code Marketplace, Open VSX, or a GitHub Release
 artifact. To install a downloaded package from the command line:
 
 ```powershell
-code --install-extension .\orbit-vsx-0.5.7.vsix
+code --install-extension .\orbit-vsx-0.6.0.vsix
 ```
 
 ## Product architecture
@@ -110,17 +110,15 @@ Example workspace settings:
 ```json
 {
   "orbit.health.endpoint": "http://127.0.0.1:3000",
-  "orbit.health.token": "",
   "orbit.debug.endpoint": "http://127.0.0.1:3001",
-  "orbit.debug.token": "",
   "orbit.a2a.registryUrl": "http://127.0.0.1:3099",
   "orbit.a2a.cliPath": "a2a-warp"
 }
 ```
 
-Use VS Code's user settings or workspace settings according to how private your
-endpoint and token values are. Do not commit personal tokens to a shared
-workspace.
+Use VS Code's user or workspace settings for non-secret endpoints. Store bearer
+tokens only through Orbit's SecretStorage commands; do not add token keys to a
+shared workspace file.
 
 ## Usage
 
