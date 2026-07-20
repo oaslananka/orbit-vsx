@@ -16,6 +16,10 @@ interface C8Config {
   statements?: number;
 }
 
+interface TestTsConfig {
+  compilerOptions?: { inlineSources?: boolean; sourceMap?: boolean };
+}
+
 interface BundleConfig {
   bundleName?: string;
   enableBundleAnalysis?: boolean;
@@ -87,6 +91,10 @@ suite('Codecov Contracts', () => {
     assert.strictEqual(manifest.devDependencies?.['@codecov/bundle-analyzer'], '2.0.1');
     assert.match(manifest.scripts?.['quality:reports'] ?? '', /output=\.test-results\/junit\.xml/);
     assert.match(manifest.scripts?.['quality:reports'] ?? '', /\.c8rc\.json/);
+    assert.match(
+      manifest.scripts?.['quality:reports'] ?? '',
+      /node scripts\/verify-quality-reports\.mjs/
+    );
     assert.match(manifest.scripts?.['quality:bundle:codecov'] ?? '', /bundle-analyzer \.\/dist/);
     assert.match(workflow, /corepack pnpm run build:prod/);
     assert.match(workflow, /corepack pnpm run quality:bundle:codecov/);
@@ -95,6 +103,18 @@ suite('Codecov Contracts', () => {
     assert.strictEqual(bundle.gitService, 'github');
     assert.strictEqual(bundle.oidc?.useGitHubOIDC, true);
     assert.strictEqual(bundle.telemetry, false);
+  });
+
+  test('Should remap coverage to repository TypeScript sources', () => {
+    const testConfig = readJson<TestTsConfig>('test/tsconfig.json');
+    const verifier = read('scripts/verify-quality-reports.mjs');
+
+    assert.strictEqual(testConfig.compilerOptions?.sourceMap, true);
+    assert.strictEqual(testConfig.compilerOptions?.inlineSources, true);
+    assert.match(verifier, /line\.startsWith\('SF:'\)/);
+    assert.match(verifier, /normalized\.endsWith\('\.ts'\)/);
+    assert.match(verifier, /existsSync\(normalized\)/);
+    assert.match(verifier, /JUnit report does not contain a testsuite root/);
   });
 
   test('Should keep Codecov configs and generated reports out of the VSIX', () => {

@@ -47,7 +47,7 @@ suite('Test Build Contracts', () => {
 
     assert.strictEqual(
       manifest.scripts['test:compile'],
-      'node test/cleanGenerated.mjs && tsc -p test/tsconfig.json'
+      'node test/cleanGenerated.mjs && tsc -p test/tsconfig.json && node test/normalizeGenerated.mjs'
     );
     assert.ok(manifest.scripts.pretest?.includes('pnpm run test:compile'));
     assert.ok(manifest.scripts['pretest:unit']?.includes('pnpm run test:compile'));

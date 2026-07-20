@@ -11,7 +11,9 @@
     "noUnusedParameters": true,
     "exactOptionalPropertyTypes": true,
     "skipLibCheck": true,
-    "types": ["node", "mocha"]
+    "types": ["node", "mocha"],
+    "sourceMap": true,
+    "inlineSources": true
   },
   "include": ["runTests.ts", "packageSmoke.ts", "suite/**/*.ts", "smoke/**/*.ts", "unit/**/*.ts"],
   "exclude": ["node_modules", "../dist"]
