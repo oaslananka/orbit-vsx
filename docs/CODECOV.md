@@ -2,7 +2,7 @@
 
 Orbit publishes three independent quality signals to the connected Codecov project:
 
-1. **Coverage** — c8 emits `coverage/lcov.info` for the TypeScript extension runtime.
+1. **Coverage** — c8 emits `coverage/lcov.info` remapped to the tracked TypeScript extension sources.
 2. **Test Analytics** — Mocha emits `.test-results/junit.xml` for duration, failure, and flaky-test history.
 3. **Bundle Analysis** — Codecov's generic analyzer measures the production `dist/` tree produced by Orbit's custom esbuild pipeline, including the extension bundle and the A2A, Debug, and Health webview bundles.
 
@@ -38,4 +38,4 @@ corepack pnpm run build:prod
 corepack pnpm exec bundle-analyzer ./dist   --bundle-name=orbit-vsx-production   --config-file=./codecov-bundle.config.json   --dry-run
 ```
 
-Generated coverage and test-result directories are ignored by Git and excluded from the packaged VSIX. Test reports must not contain credentials or environment dumps.
+Generated coverage and test-result directories are ignored by Git and excluded from the packaged VSIX. The report verifier rejects absolute, parent-relative, missing, or compiled JavaScript LCOV sources so Codecov cannot silently accept an empty baseline. Test reports must not contain credentials or environment dumps.
