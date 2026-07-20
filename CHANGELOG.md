@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Security
+
+- Add repository-specific Renovate best-practices policy, strict config validation, GitHub Action digest tracking, vulnerability-alert handling, and weekly manual lockfile maintenance.
+- Add tokenless Semgrep CE scanning in pre-commit and GitHub Actions, document the existing SonarCloud and Snyk GitHub App checks, and provide an optional manual Snyk pre-commit hook.
+- Pin all GitHub Actions to immutable commit SHAs with Renovate-readable version comments.
+
 ### Changed
 
 - Track concurrent VS Code debug sessions through their matching Debug Recorder session IDs and close each mapped session exactly once on termination or extension shutdown.

@@ -41,7 +41,9 @@ function findPackagedVsix(): string {
   return vsixPath;
 }
 
-function assertNoPackagedSourceMaps(vsixPath: string): void {
+const FORBIDDEN_PACKAGE_ENTRIES = ['extension/.semgrep.yml', 'extension/sonar-project.properties'];
+
+function assertPackagedContents(vsixPath: string): void {
   const result = spawnSync('unzip', ['-Z1', vsixPath], {
     encoding: 'utf8',
     shell: false,
@@ -55,11 +57,19 @@ function assertNoPackagedSourceMaps(vsixPath: string): void {
     throw new Error(`Unable to inspect VSIX contents with unzip: ${result.status}`);
   }
 
-  const sourceMaps = String(result.stdout ?? '')
+  const entries = String(result.stdout ?? '')
     .split(/\r?\n/)
-    .filter((entry) => /^extension\/dist\/.*\.map$/.test(entry));
+    .filter(Boolean);
+  const sourceMaps = entries.filter((entry) => /^extension\/dist\/.*\.map$/.test(entry));
   if (sourceMaps.length > 0) {
     throw new Error(`Packaged VSIX must not contain dist source maps: ${sourceMaps.join(', ')}`);
+  }
+
+  const forbiddenEntries = entries.filter((entry) => FORBIDDEN_PACKAGE_ENTRIES.includes(entry));
+  if (forbiddenEntries.length > 0) {
+    throw new Error(
+      `Packaged VSIX must not contain maintainer-only files: ${forbiddenEntries.join(', ')}`
+    );
   }
 }
 
@@ -231,7 +241,7 @@ async function main(): Promise<void> {
     const { downloadAndUnzipVSCode } = await import('@vscode/test-electron');
     const executablePath = await downloadAndUnzipVSCode(getVSCodeDownloadVersion());
     const vsixPath = findPackagedVsix();
-    assertNoPackagedSourceMaps(vsixPath);
+    assertPackagedContents(vsixPath);
     const extensionTestsPath = path.resolve(__dirname, './smoke/index');
     profileRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-vsix-smoke-'));
     const harnessPath = createSmokeHarness(profileRoot);

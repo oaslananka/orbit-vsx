@@ -210,7 +210,7 @@ Node 24 is the current maintainer lane.
 
 ## Maintainer documentation
 
-See the files in `docs/` for dependency policy, release governance, observability/privacy, and maintainer roadmap details.
+See the files in `docs/` for dependency policy, security tooling, release governance, observability/privacy, and maintainer roadmap details.
 
 ## Contributing
 

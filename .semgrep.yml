@@ -1,0 +1,52 @@
+rules:
+  - id: orbit.javascript.no-dynamic-code-execution
+    languages: [javascript, typescript]
+    message: Dynamic code execution is not allowed in the extension or webviews.
+    severity: ERROR
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+      - patterns:
+          - pattern: 'setTimeout($CODE, ...)'
+          - metavariable-regex:
+              metavariable: $CODE
+              regex: ^[\"']
+      - patterns:
+          - pattern: 'setInterval($CODE, ...)'
+          - metavariable-regex:
+              metavariable: $CODE
+              regex: ^[\"']
+
+  - id: orbit.node.no-shell-command-execution
+    languages: [javascript, typescript]
+    message: Use execFile/spawn with an argument array instead of shell command execution.
+    severity: ERROR
+    pattern-either:
+      - pattern: exec(...)
+      - pattern: execSync(...)
+      - pattern: child_process.exec(...)
+      - pattern: child_process.execSync(...)
+
+  - id: orbit.node.no-shell-true
+    languages: [javascript, typescript]
+    message: shell:true creates command-injection risk; pass an executable and argument array instead.
+    severity: ERROR
+    pattern-either:
+      - pattern: 'execFile($CMD, $ARGS, { ..., shell: true, ... })'
+      - pattern: 'spawn($CMD, $ARGS, { ..., shell: true, ... })'
+
+  - id: orbit.tls.no-disabled-certificate-validation
+    languages: [javascript, typescript]
+    message: TLS certificate validation must not be disabled.
+    severity: ERROR
+    pattern: '{ ..., rejectUnauthorized: false, ... }'
+
+  - id: orbit.webview.no-unsafe-inner-html
+    languages: [javascript, typescript]
+    message: Avoid assigning untrusted data to innerHTML; use escaped rendering or textContent.
+    severity: WARNING
+    pattern: $ELEMENT.innerHTML = $VALUE
+    paths:
+      include:
+        - /webview-ui/src
+        - /src

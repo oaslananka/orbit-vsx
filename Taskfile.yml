@@ -17,6 +17,14 @@ tasks:
     cmds:
       - corepack pnpm run format:check
 
+  validate-renovate:
+    cmds:
+      - corepack pnpm run validate:renovate
+
+  security:
+    cmds:
+      - corepack pnpm run security:local
+
   test:
     cmds:
       - corepack pnpm test
