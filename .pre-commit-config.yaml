@@ -1,10 +1,51 @@
+minimum_pre_commit_version: '4.0.0'
+default_stages: [pre-commit]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-case-conflict
       - id: check-merge-conflict
       - id: check-yaml
       - id: check-json
       - id: check-toml
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=no]
+
+  - repo: local
+    hooks:
+      - id: orbit-prettier
+        name: Orbit Prettier check
+        entry: corepack pnpm exec prettier --check
+        language: system
+        files: \.(json|md|ya?ml|[cm]?[jt]sx?)$
+        pass_filenames: true
+
+      - id: orbit-eslint
+        name: Orbit ESLint check
+        entry: corepack pnpm exec eslint --max-warnings=0
+        language: system
+        files: ^(src|webview-ui/src|test)/.*\.(ts|tsx)$
+        pass_filenames: true
+
+      - id: orbit-semgrep
+        name: Orbit Semgrep security rules
+        entry: semgrep scan --config .semgrep.yml --error --metrics=off
+        language: python
+        additional_dependencies:
+          - semgrep==1.170.0
+        files: ^(src|webview-ui/src|test)/.*\.(ts|tsx|js|mjs)$
+        pass_filenames: false
+
+      - id: orbit-snyk
+        name: Orbit Snyk Open Source scan
+        entry: corepack pnpm run security:snyk
+        language: system
+        pass_filenames: false
+        stages: [manual]

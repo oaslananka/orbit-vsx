@@ -1,41 +1,140 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": ["config:best-practices"],
+  "timezone": "Europe/Istanbul",
   "schedule": ["before 6am on monday"],
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Dependency Dashboard",
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
-  "automerge": false,
+  "branchConcurrentLimit": 8,
   "labels": ["dependencies"],
   "commitMessagePrefix": "chore(deps):",
+  "rebaseWhen": "behind-base-branch",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "prCreation": "immediate",
+    "automerge": false,
+    "labels": ["dependencies", "security", "priority:P1", "theme:supply-chain"]
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on monday"],
+    "automerge": false,
+    "labels": ["dependencies", "area:ci", "theme:supply-chain"]
+  },
   "packageRules": [
     {
+      "description": "Do not auto-raise the supported VS Code or Node runtime floor.",
       "matchManagers": ["npm"],
       "matchDepTypes": ["engines"],
       "matchPackageNames": ["vscode", "node"],
-      "enabled": false,
-      "description": "Do not auto-raise the supported VS Code or Node floor."
+      "enabled": false
     },
     {
+      "description": "The VS Code API type floor follows engines.vscode and requires an explicit compatibility decision.",
       "matchPackageNames": ["@types/vscode"],
-      "enabled": false,
-      "description": "VS Code API type floor follows the supported engines.vscode baseline."
+      "enabled": false
     },
     {
+      "description": "Keep @types/node on the supported Node 22 major until the runtime floor changes.",
+      "matchPackageNames": ["@types/node"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Automerge low-risk patch, pin, and digest updates after protected checks pass.",
+      "matchUpdateTypes": ["patch", "pin", "digest"],
+      "automerge": true,
+      "automergeType": "pr",
+      "labels": ["dependencies", "risk:low"]
+    },
+    {
+      "description": "Automerge minor development-tool updates after protected checks pass.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "labels": ["dependencies", "area:ci", "risk:low"]
+    },
+    {
+      "description": "Automerge non-major GitHub Action updates while keeping immutable digests.",
       "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["digest", "patch", "minor"],
+      "automerge": true,
+      "automergeType": "pr",
+      "labels": ["dependencies", "area:ci", "theme:supply-chain"]
+    },
+    {
+      "description": "Review major updates manually.",
       "matchUpdateTypes": ["major"],
       "automerge": false,
-      "labels": ["dependencies", "area:ci", "theme:supply-chain"],
-      "description": "Review major GitHub Action updates manually."
+      "labels": ["dependencies", "risk:high"]
     },
     {
-      "matchUpdateTypes": ["patch"],
-      "automerge": true
+      "description": "Review compatibility-sensitive minor updates manually.",
+      "matchPackageNames": [
+        "typescript",
+        "react",
+        "react-dom",
+        "@types/react",
+        "@types/react-dom",
+        "esbuild",
+        "@vscode/test-cli",
+        "@vscode/test-electron",
+        "@vscode/vsce",
+        "ovsx"
+      ],
+      "matchUpdateTypes": ["minor", "major"],
+      "automerge": false,
+      "labels": ["dependencies", "area:compatibility", "risk:medium"]
     },
     {
-      "matchDepTypes": ["devDependencies"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
+      "description": "Group React runtime and type updates for one compatibility review.",
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "React ecosystem"
+    },
+    {
+      "description": "Group TypeScript and ESLint toolchain updates.",
+      "matchPackageNames": [
+        "typescript",
+        "eslint",
+        "@typescript-eslint/eslint-plugin",
+        "@typescript-eslint/parser"
+      ],
+      "groupName": "TypeScript lint toolchain"
     }
   ],
-  "dependencyDashboard": true
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update the pinned Renovate config validator version.",
+      "managerFilePatterns": ["/^package\\.json$/"],
+      "matchStrings": ["renovate@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "renovate",
+      "datasourceTemplate": "npm",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Update the pinned Semgrep CLI in CI and pre-commit.",
+      "managerFilePatterns": [
+        "/^\\.pre-commit-config\\.yaml$/",
+        "/^\\.github/workflows/semgrep\\.yml$/"
+      ],
+      "matchStrings": ["semgrep==(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "semgrep",
+      "datasourceTemplate": "pypi",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Update the pinned Snyk CLI used by the security workflow.",
+      "managerFilePatterns": ["/^package\\.json$/"],
+      "matchStrings": ["snyk@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "snyk",
+      "datasourceTemplate": "npm",
+      "versioningTemplate": "semver"
+    }
+  ]
 }

@@ -37,3 +37,5 @@ RELEASING.md
 renovate.json
 Taskfile.yml
 *.vsix
+.semgrep.yml
+sonar-project.properties

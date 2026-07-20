@@ -38,6 +38,22 @@ including the packaged extension smoke test:
 task verify
 ```
 
+Install and run the local security hooks before submitting a security-sensitive
+change:
+
+```bash
+python3 -m pip install --user pre-commit
+pre-commit install
+pre-commit run --all-files
+pnpm run validate:renovate
+pnpm run security:semgrep
+```
+
+`pnpm run security:snyk` and the manual `orbit-snyk` pre-commit stage are available
+when Snyk authentication is configured. SonarCloud and Snyk pull-request checks are
+provided by the installed GitHub Apps; see `docs/SECURITY_TOOLING.md` for local use and
+branch-protection guidance.
+
 Remove generated `.vsix` files after package verification unless you are
 publishing a release artifact.
 

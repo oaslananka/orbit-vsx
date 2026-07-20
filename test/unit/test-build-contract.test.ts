@@ -26,6 +26,8 @@ suite('Test Build Contracts', () => {
       '.pnpm-store/',
       '.pre-commit-config.yaml',
       '.prettierignore',
+      '.semgrep.yml',
+      'sonar-project.properties',
     ].forEach((entry) => {
       assert.match(vscodeignore, new RegExp(`^${escapeRegExp(entry)}$`, 'm'));
     });
