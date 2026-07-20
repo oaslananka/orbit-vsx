@@ -1,5 +1,6 @@
 packages:
   - '.'
+# Override ownership, evidence, and removal conditions: docs/PNPM_OVERRIDES.md
 overrides:
   '@vscode/test-cli>glob': 13.0.6
   '@vscode/vsce>glob': 13.0.6

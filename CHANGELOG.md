@@ -15,6 +15,7 @@
 
 ### Security
 
+- Add Sigstore-backed GitHub provenance and SBOM attestations, offline release bundles, a complete Apache-2.0 license, and an auditable pnpm override register.
 - Remove legacy plaintext token settings from every configuration scope even when SecretStorage already contains the authoritative token.
 - Add repository-specific Renovate best-practices policy, strict config validation, GitHub Action digest tracking, vulnerability-alert handling, and weekly manual lockfile maintenance.
 - Add tokenless Semgrep CE scanning in pre-commit and GitHub Actions, document the existing SonarCloud and Snyk GitHub App checks, and provide an optional manual Snyk pre-commit hook.
