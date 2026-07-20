@@ -9,7 +9,7 @@ overrides:
   'mocha>glob': 13.0.6
   mocha>diff: 8.0.4
   mocha>serialize-javascript: 7.0.5
-  shell-quote: 1.8.4
+  shell-quote: 1.9.0
   'test-exclude>glob': 13.0.6
   form-data: 4.0.6
   undici: 7.28.0
