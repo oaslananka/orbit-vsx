@@ -56,11 +56,19 @@ function parseResult(result: unknown): unknown {
 
 function validAgentCard(): Record<string, unknown> {
   return {
-    capabilities: { streaming: true },
+    capabilities: { extendedAgentCard: true, streaming: true },
     defaultInputModes: ['application/json'],
     defaultOutputModes: ['application/json'],
     description: 'Demo agent',
     name: 'demo-agent',
+    securityRequirements: [{ schemes: { oidc: { list: ['openid'] } } }],
+    securitySchemes: {
+      oidc: {
+        openIdConnectSecurityScheme: {
+          openIdConnectUrl: 'https://accounts.example.com/.well-known/openid-configuration',
+        },
+      },
+    },
     skills: [{ description: 'Demo skill', id: 'demo', name: 'Demo', tags: ['demo'] }],
     supportedInterfaces: [
       { protocolBinding: 'jsonrpc', protocolVersion: '1.0', url: 'https://agent.example.com/a2a' },
@@ -183,6 +191,21 @@ suite('Language Model Tools', () => {
         ?.invoke({ input: {} })
     ) as { servers: Array<{ url: string }> };
     assert.strictEqual(healthResult.servers[0]?.url, 'https://example.com/mcp?%E2%80%A6');
+
+    const agentResult = parseResult(
+      await registeredTools
+        .get(orbitTools.ORBIT_LANGUAGE_MODEL_TOOL_NAMES.LIST_A2A_AGENTS)
+        ?.invoke({ input: {} })
+    ) as {
+      agents: Array<{
+        card: {
+          capabilities: { extendedAgentCard?: boolean };
+          securitySchemes: Record<string, { type: string }>;
+        };
+      }>;
+    };
+    assert.strictEqual(agentResult.agents[0]?.card.capabilities.extendedAgentCard, true);
+    assert.strictEqual(agentResult.agents[0]?.card.securitySchemes.oidc?.type, 'openIdConnect');
 
     const validationResult = parseResult(
       await registeredTools

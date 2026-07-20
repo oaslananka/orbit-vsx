@@ -1,7 +1,12 @@
 import * as vscode from 'vscode';
 import type { A2AProvider } from '../panels/a2a/A2AProvider';
 import { validateAgentCardText } from '../panels/a2a/agentCardValidation';
-import type { AgentCard, AgentRegistryEntry, ValidationResult } from '../panels/a2a/types';
+import type {
+  AgentCard,
+  AgentRegistryEntry,
+  SecurityScheme,
+  ValidationResult,
+} from '../panels/a2a/types';
 import type { DebugProvider } from '../panels/debug/DebugProvider';
 import type { DebugSession } from '../panels/debug/types';
 import type { HealthProvider } from '../panels/health/HealthProvider';
@@ -389,6 +394,14 @@ function summarizeAgentRegistryEntry(entry: AgentRegistryEntry): Record<string, 
   };
 }
 
+function securitySchemeKind(scheme: SecurityScheme): string {
+  if ('apiKeySecurityScheme' in scheme) return 'apiKey';
+  if ('httpAuthSecurityScheme' in scheme) return 'http';
+  if ('oauth2SecurityScheme' in scheme) return 'oauth2';
+  if ('openIdConnectSecurityScheme' in scheme) return 'openIdConnect';
+  return 'mutualTLS';
+}
+
 function summarizeAgentCard(card: AgentCard): Record<string, unknown> {
   return {
     capabilities: card.capabilities,
@@ -402,7 +415,7 @@ function summarizeAgentCard(card: AgentCard): Record<string, unknown> {
       ? Object.fromEntries(
           Object.entries(card.securitySchemes).map(([name, scheme]) => [
             name,
-            { type: scheme.type },
+            { type: securitySchemeKind(scheme) },
           ])
         )
       : undefined,

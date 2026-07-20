@@ -47,6 +47,158 @@ suite('A2A Agent Card Validation', () => {
     assert.strictEqual(card.skills[0]?.tags[0], 'support');
   });
 
+  test('Should accept canonical A2A 1.0 security wrappers and extended card capabilities', () => {
+    const payload = {
+      ...validAgentCard(),
+      capabilities: {
+        extendedAgentCard: true,
+        pushNotifications: false,
+        streaming: true,
+      },
+      securityRequirements: [
+        {
+          schemes: {
+            oidc: { list: ['openid', 'profile'] },
+          },
+        },
+      ],
+      securitySchemes: {
+        apiKey: {
+          apiKeySecurityScheme: {
+            location: 'header',
+            name: 'X-API-Key',
+          },
+        },
+        bearer: {
+          httpAuthSecurityScheme: {
+            bearerFormat: 'JWT',
+            scheme: 'Bearer',
+          },
+        },
+        mtls: {
+          mtlsSecurityScheme: {
+            description: 'Client certificate authentication',
+          },
+        },
+        oauth: {
+          oauth2SecurityScheme: {
+            flows: {
+              clientCredentials: {
+                scopes: { 'agent.read': 'Read agent data' },
+                tokenUrl: 'https://auth.example.com/token',
+              },
+            },
+            oauth2MetadataUrl: 'https://auth.example.com/.well-known/oauth-authorization-server',
+          },
+        },
+        oidc: {
+          openIdConnectSecurityScheme: {
+            openIdConnectUrl: 'https://accounts.example.com/.well-known/openid-configuration',
+          },
+        },
+      },
+      skills: [
+        {
+          description: 'Answer questions',
+          id: 'answer_questions',
+          name: 'Answer Questions',
+          securityRequirements: [
+            {
+              schemes: {
+                oidc: { list: ['openid'] },
+              },
+            },
+          ],
+          tags: ['support', 'qa'],
+        },
+      ],
+    };
+
+    const card = validateAgentCardPayload(payload);
+
+    assert.strictEqual(card.capabilities.extendedAgentCard, true);
+    assert.deepStrictEqual(card.securitySchemes, {
+      apiKey: {
+        apiKeySecurityScheme: { location: 'header', name: 'X-API-Key' },
+      },
+      bearer: {
+        httpAuthSecurityScheme: { bearerFormat: 'JWT', scheme: 'Bearer' },
+      },
+      mtls: {
+        mtlsSecurityScheme: { description: 'Client certificate authentication' },
+      },
+      oauth: {
+        oauth2SecurityScheme: {
+          flows: {
+            clientCredentials: {
+              scopes: { 'agent.read': 'Read agent data' },
+              tokenUrl: 'https://auth.example.com/token',
+            },
+          },
+          oauth2MetadataUrl: 'https://auth.example.com/.well-known/oauth-authorization-server',
+        },
+      },
+      oidc: {
+        openIdConnectSecurityScheme: {
+          openIdConnectUrl: 'https://accounts.example.com/.well-known/openid-configuration',
+        },
+      },
+    });
+    assert.deepStrictEqual(card.securityRequirements, [
+      { schemes: { oidc: { list: ['openid', 'profile'] } } },
+    ]);
+    assert.deepStrictEqual(card.skills[0]?.securityRequirements, [
+      { schemes: { oidc: { list: ['openid'] } } },
+    ]);
+  });
+
+  test('Should normalize legacy security shapes without losing their meaning', () => {
+    const payload: Record<string, unknown> = {
+      ...validAgentCard(),
+      security: [{ bearerAuth: [] }],
+      securitySchemes: {
+        bearerAuth: { bearerFormat: 'JWT', scheme: 'bearer', type: 'http' },
+        oidc: {
+          openIdConnectUrl: 'https://accounts.example.com/.well-known/openid-configuration',
+          type: 'openIdConnect',
+        },
+      },
+    };
+    delete payload.securityRequirements;
+
+    const card = validateAgentCardPayload(payload);
+
+    assert.deepStrictEqual(card.securityRequirements, [{ schemes: { bearerAuth: { list: [] } } }]);
+    assert.deepStrictEqual(card.securitySchemes?.bearerAuth, {
+      httpAuthSecurityScheme: { bearerFormat: 'JWT', scheme: 'bearer' },
+    });
+    assert.deepStrictEqual(card.securitySchemes?.oidc, {
+      openIdConnectSecurityScheme: {
+        openIdConnectUrl: 'https://accounts.example.com/.well-known/openid-configuration',
+      },
+    });
+  });
+
+  test('Should reject ambiguous A2A 1.0 security scheme wrappers', () => {
+    assert.throws(
+      () =>
+        validateAgentCardPayload({
+          ...validAgentCard(),
+          securitySchemes: {
+            ambiguous: {
+              httpAuthSecurityScheme: { scheme: 'Bearer' },
+              mtlsSecurityScheme: {},
+            },
+          },
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AgentCardValidationError);
+        assert.match(error.message, /exactly one security scheme wrapper/);
+        return true;
+      }
+    );
+  });
+
   test('Should reject malformed and incomplete discovered cards', () => {
     assert.throws(
       () => validateAgentCardPayload({ ...validAgentCard(), capabilities: undefined }),

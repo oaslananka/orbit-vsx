@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Align Agent Card validation with the A2A 1.0 ProtoJSON model, including security scheme wrappers, canonical security requirements, and `capabilities.extendedAgentCard`.
+- Normalize supported pre-1.0 security scheme and `security` requirement shapes into the canonical runtime model before rendering or exposing them through Language Model Tools.
+
 ## [0.5.7] - 2026-06-11
 
 ### Fixed
