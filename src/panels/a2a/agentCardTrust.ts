@@ -101,6 +101,8 @@ type MatchingKeysResult =
   | { ok: true; keys: PublicJwk[] }
   | { ok: false; outcome: SignatureOutcome };
 
+type RejectedSignatureResult = { ok: false; outcome: SignatureOutcome };
+
 export class AgentCardTrustVerifier {
   private readonly cache = new Map<string, CachedJwks>();
   private readonly cacheTtlMs: number;
@@ -356,7 +358,7 @@ export class AgentCardTrustVerifier {
     try {
       keys = await this.getJwks(context.keyUrl);
     } catch {
-      return rejectedMatchingKeys(
+      return rejectedResolvedContext(
         context,
         'key_fetch_failed',
         'The trusted JWKS could not be retrieved or parsed.'
@@ -365,7 +367,7 @@ export class AgentCardTrustVerifier {
 
     const matchingKeys = keys.filter((key) => key.kid === context.keyId);
     if (matchingKeys.length === 0) {
-      return rejectedMatchingKeys(
+      return rejectedResolvedContext(
         context,
         'key_not_found',
         'No matching verification key was found.'
@@ -841,18 +843,7 @@ function rejectedResolvedContext(
   context: ResolvedSignatureContext,
   reason: AgentCardTrustReason,
   summary: string
-): SignatureResolutionResult {
-  return {
-    ok: false,
-    outcome: outcomeForResolvedContext(context, 'key-unavailable', reason, summary),
-  };
-}
-
-function rejectedMatchingKeys(
-  context: ResolvedSignatureContext,
-  reason: AgentCardTrustReason,
-  summary: string
-): MatchingKeysResult {
+): RejectedSignatureResult {
   return {
     ok: false,
     outcome: outcomeForResolvedContext(context, 'key-unavailable', reason, summary),
