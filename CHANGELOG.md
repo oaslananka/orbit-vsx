@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Apply Debug Recorder auto-tracking and editor-decoration setting changes without reloading VS Code, including initial-editor and document-edit refreshes.
 - Preserve typed audit targets while sanitizing field injection and dispose the audit channel with the extension lifecycle.
 - Honor Language Model Tool health refresh controls through the shared HealthStore and return deterministic, parseable JSON with explicit omission metadata.
 - Track concurrent VS Code debug sessions through their matching Debug Recorder session IDs and close each mapped session exactly once on termination or extension shutdown.

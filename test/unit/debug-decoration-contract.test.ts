@@ -17,8 +17,13 @@ suite('Debug Decoration Contracts', () => {
     assert.ok(source.includes('MAX_ERROR_MATCHES'));
     assert.ok(source.includes('MAX_SIMILARITY_CACHE_ENTRIES'));
     assert.ok(source.includes('private readonly similarityCache = new Map'));
+    assert.ok(source.includes('private readonly decoratedEditors = new Set'));
     assert.ok(source.includes('private updateGeneration = 0'));
     assert.ok(source.includes('generation !== this.updateGeneration'));
+    assert.ok(source.includes('vscode.workspace.onDidChangeTextDocument'));
+    assert.ok(source.includes('vscode.window.activeTextEditor'));
+    assert.ok(source.includes('this.clearAllDecorations()'));
+    assert.ok(source.includes('this.getDebugClient().findSimilarErrors'));
     assert.ok(source.includes('this.updateGeneration++'));
     assert.ok(source.includes('this.decorationType.dispose()'));
   });

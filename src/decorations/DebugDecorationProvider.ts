@@ -10,6 +10,7 @@ const MAX_ERROR_TEXT_CHARS = 500;
 const SIMILARITY_CACHE_TTL_MS = 30_000;
 const SIMILARITY_LOOKUP_TIMEOUT_MS = 1_500;
 const MAX_SIMILARITY_CACHE_ENTRIES = 100;
+const DEFAULT_DEBOUNCE_MS = 500;
 
 interface ErrorMatch {
   index: number;
@@ -29,18 +30,43 @@ export class DebugDecorationProvider implements vscode.Disposable {
     },
   });
   private readonly disposables: vscode.Disposable[] = [];
+  private readonly decoratedEditors = new Set<vscode.TextEditor>();
   private readonly logger = new Logger('Orbit:DebugDecorations');
   private readonly similarityCache = new Map<string, SimilarityCacheEntry>();
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private updateGeneration = 0;
   private disposed = false;
 
-  constructor(private readonly debugClient: DebugClient) {
+  constructor(
+    private readonly getDebugClient: () => DebugClient,
+    private readonly debounceMs = DEFAULT_DEBOUNCE_MS
+  ) {
     this.disposables.push(
       vscode.window.onDidChangeActiveTextEditor((editor) => {
+        this.cancelPendingUpdate();
+        this.clearDecorationsExcept(editor);
         if (editor) this.scheduleUpdate(editor);
+      }),
+      vscode.workspace.onDidChangeTextDocument((event) => {
+        const editor = vscode.window.activeTextEditor;
+        if (editor?.document === event.document) this.scheduleUpdate(editor);
       })
     );
+
+    if (vscode.window.activeTextEditor) {
+      this.scheduleUpdate(vscode.window.activeTextEditor);
+    }
+  }
+
+  onClientChanged(): void {
+    if (this.disposed) return;
+    this.similarityCache.clear();
+    this.cancelPendingUpdate();
+    if (vscode.window.activeTextEditor) {
+      this.scheduleUpdate(vscode.window.activeTextEditor);
+    } else {
+      this.clearAllDecorations();
+    }
   }
 
   private scheduleUpdate(editor: vscode.TextEditor): void {
@@ -50,7 +76,15 @@ export class DebugDecorationProvider implements vscode.Disposable {
     this.debounceTimer = setTimeout(() => {
       this.debounceTimer = undefined;
       void this.updateDecorations(editor, generation);
-    }, 500);
+    }, this.debounceMs);
+  }
+
+  private cancelPendingUpdate(): void {
+    this.updateGeneration++;
+    if (this.debounceTimer !== undefined) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = undefined;
+    }
   }
 
   private async updateDecorations(editor: vscode.TextEditor, generation: number): Promise<void> {
@@ -59,7 +93,7 @@ export class DebugDecorationProvider implements vscode.Disposable {
     const document = editor.document;
     const text = document.getText();
     if (text.length > MAX_DOCUMENT_CHARS) {
-      editor.setDecorations(this.decorationType, []);
+      this.clearEditorDecorations(editor);
       this.logger.info(`Skipped debug decorations for large document (${text.length} chars)`);
       return;
     }
@@ -90,6 +124,11 @@ export class DebugDecorationProvider implements vscode.Disposable {
 
     if (!this.disposed && generation === this.updateGeneration) {
       editor.setDecorations(this.decorationType, decorations);
+      if (decorations.length > 0) {
+        this.decoratedEditors.add(editor);
+      } else {
+        this.decoratedEditors.delete(editor);
+      }
     }
   }
 
@@ -133,7 +172,7 @@ export class DebugDecorationProvider implements vscode.Disposable {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       return await Promise.race([
-        this.debugClient.findSimilarErrors(errorText, SIMILARITY_LOOKUP_TIMEOUT_MS),
+        this.getDebugClient().findSimilarErrors(errorText, SIMILARITY_LOOKUP_TIMEOUT_MS),
         new Promise<DebugSession[]>((resolve) => {
           timeout = setTimeout(() => resolve([]), SIMILARITY_LOOKUP_TIMEOUT_MS);
         }),
@@ -153,13 +192,28 @@ export class DebugDecorationProvider implements vscode.Disposable {
     }
   }
 
-  dispose(): void {
-    this.disposed = true;
-    this.updateGeneration++;
-    if (this.debounceTimer !== undefined) {
-      clearTimeout(this.debounceTimer);
-      this.debounceTimer = undefined;
+  private clearDecorationsExcept(editor: vscode.TextEditor | undefined): void {
+    for (const decoratedEditor of Array.from(this.decoratedEditors)) {
+      if (decoratedEditor !== editor) this.clearEditorDecorations(decoratedEditor);
     }
+  }
+
+  private clearEditorDecorations(editor: vscode.TextEditor): void {
+    editor.setDecorations(this.decorationType, []);
+    this.decoratedEditors.delete(editor);
+  }
+
+  private clearAllDecorations(): void {
+    for (const editor of Array.from(this.decoratedEditors)) {
+      this.clearEditorDecorations(editor);
+    }
+  }
+
+  dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.cancelPendingUpdate();
+    this.clearAllDecorations();
     this.similarityCache.clear();
     this.disposables.forEach((disposable) => disposable.dispose());
     this.decorationType.dispose();

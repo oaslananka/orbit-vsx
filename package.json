@@ -411,7 +411,7 @@
         "orbit.debug.showEditorDecorations": {
           "type": "boolean",
           "default": false,
-          "description": "Show debug session frequency hints inline in the editor."
+          "description": "Show debug session frequency hints inline and refresh them as the active document changes. Changes take effect without reloading VS Code."
         },
         "orbit.a2a.registryUrl": {
           "type": "string",

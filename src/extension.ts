@@ -3,6 +3,7 @@ import { HealthProvider } from './panels/health/HealthProvider';
 import { HealthStore } from './panels/health/HealthStore';
 import { DebugProvider } from './panels/debug/DebugProvider';
 import { DebugSessionTracker } from './panels/debug/DebugSessionTracker';
+import { DebugIntegrationController } from './panels/debug/DebugIntegrationController';
 import { A2AProvider } from './panels/a2a/A2AProvider';
 import { StatusBarController } from './statusbar/StatusBarController';
 import { registerHealthCommands } from './commands/health';
@@ -20,7 +21,7 @@ import { validateAgentCardText } from './panels/a2a/agentCardValidation';
 import { registerNativeMcpProvider } from './mcp/nativeMcpProvider';
 import { registerOrbitLanguageModelTools } from './lm/orbitTools';
 
-let activeDebugSessionTracker: DebugSessionTracker | undefined;
+let activeDebugIntegrationController: DebugIntegrationController | undefined;
 
 interface StartupRefreshProvider {
   refresh(): Promise<void> | void;
@@ -57,6 +58,24 @@ export function activate(context: vscode.ExtensionContext): void {
   const mcpProvider = new McpExplorerProvider(healthStore);
   const statusBar = new StatusBarController(healthProvider);
   const nativeMcpProvider = registerNativeMcpProvider(context);
+  const debugIntegrations = new DebugIntegrationController({
+    createDecorations: () => new DebugDecorationProvider(() => debugProvider.getClient()),
+    createTracker: () =>
+      new DebugSessionTracker(
+        () => debugProvider.getClient(),
+        logger,
+        () => debugProvider.refresh()
+      ),
+    onDidStartDebugSession: (callback) =>
+      vscode.debug.onDidStartDebugSession((session) => {
+        callback({ id: session.id, name: session.name });
+      }),
+    onDidTerminateDebugSession: (callback) =>
+      vscode.debug.onDidTerminateDebugSession((session) => {
+        callback({ id: session.id, name: session.name });
+      }),
+  });
+  activeDebugIntegrationController = debugIntegrations;
 
   const healthTree = vscode.window.createTreeView('orbit.health', {
     treeDataProvider: healthProvider,
@@ -101,6 +120,7 @@ export function activate(context: vscode.ExtensionContext): void {
     debugProvider,
     a2aProvider,
     mcpProvider,
+    debugIntegrations,
     healthTree,
     debugTree,
     a2aTree,
@@ -117,6 +137,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const refreshSecretBackedClients = (): void => {
     healthProvider.onConfigChanged();
     debugProvider.onConfigChanged();
+    debugIntegrations.onDebugClientChanged();
     mcpProvider.onConfigChanged();
     statusBar.onConfigChanged();
     nativeMcpProvider.onConfigChanged();
@@ -132,35 +153,14 @@ export function activate(context: vscode.ExtensionContext): void {
     });
 
   statusBar.start();
-
-  if (config.debug.showEditorDecorations) {
-    const decorationProvider = new DebugDecorationProvider(debugProvider.getClient());
-    context.subscriptions.push(decorationProvider);
-  }
-
-  if (config.debug.autoTrackVscodeSessions) {
-    const tracker = new DebugSessionTracker(
-      () => debugProvider.getClient(),
-      logger,
-      () => debugProvider.refresh()
-    );
-    activeDebugSessionTracker = tracker;
-    context.subscriptions.push(
-      vscode.debug.onDidStartDebugSession((session) => {
-        void tracker.start({ id: session.id, name: session.name });
-      }),
-      vscode.debug.onDidTerminateDebugSession((session) => {
-        void tracker.terminate({ id: session.id, name: session.name });
-      }),
-      tracker
-    );
-  }
+  debugIntegrations.reconcile(config.debug);
 
   context.subscriptions.push(
     vscode.workspace.onDidGrantWorkspaceTrust(() => {
       logger.info('Workspace trust granted; refreshing Orbit providers');
       healthProvider.onConfigChanged();
       debugProvider.onConfigChanged();
+      debugIntegrations.onDebugClientChanged();
       a2aProvider.onConfigChanged();
       mcpProvider.onConfigChanged();
       statusBar.onConfigChanged();
@@ -201,12 +201,14 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('orbit')) {
         logger.info('Configuration changed');
+        const nextConfig = readConfig();
         healthProvider.onConfigChanged();
         debugProvider.onConfigChanged();
+        debugIntegrations.onDebugClientChanged();
+        debugIntegrations.reconcile(nextConfig.debug);
         a2aProvider.onConfigChanged();
         mcpProvider.onConfigChanged();
         statusBar.onConfigChanged();
-        nativeMcpProvider.onConfigChanged();
         nativeMcpProvider.onConfigChanged();
       }
     }),
@@ -216,7 +218,7 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export async function deactivate(): Promise<void> {
-  const tracker = activeDebugSessionTracker;
-  activeDebugSessionTracker = undefined;
-  await tracker?.shutdown();
+  const controller = activeDebugIntegrationController;
+  activeDebugIntegrationController = undefined;
+  await controller?.shutdown();
 }

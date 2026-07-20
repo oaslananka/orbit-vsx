@@ -26,13 +26,17 @@ suite('Extension Lifecycle Contracts', () => {
     assert.ok(!source.includes('vscode.workspace.onDidChangeTextDocument'));
   });
 
-  test('Should associate VS Code debug sessions with Orbit sessions through a lifecycle tracker', () => {
+  test('Should reconcile optional debug integrations without extension reloads', () => {
     const source = readSource('src/extension.ts');
 
+    assert.ok(source.includes('new DebugIntegrationController({'));
     assert.ok(source.includes('new DebugSessionTracker('));
-    assert.ok(source.includes('tracker.start({ id: session.id, name: session.name })'));
-    assert.ok(source.includes('tracker.terminate({ id: session.id, name: session.name })'));
-    assert.ok(source.includes('await tracker?.shutdown()'));
+    assert.ok(source.includes('debugIntegrations.reconcile(config.debug)'));
+    assert.ok(source.includes('debugIntegrations.reconcile(nextConfig.debug)'));
+    assert.ok(source.includes('debugIntegrations.onDebugClientChanged()'));
+    assert.ok(source.includes('await controller?.shutdown()'));
+    assert.ok(!source.includes('if (config.debug.showEditorDecorations)'));
+    assert.ok(!source.includes('if (config.debug.autoTrackVscodeSessions)'));
   });
 
   test('Should apply the configured visible-session limit and recent window', () => {
