@@ -123,7 +123,8 @@ suite('Security Tooling Contracts', () => {
     const release = read('.github/workflows/release.yml');
 
     for (const workflow of [semgrep, codeql, release]) {
-      assert.match(workflow, /^permissions: read-all$/m);
+      assert.match(workflow, /^permissions:\n  contents: read$/m);
+      assert.ok(!workflow.includes('permissions: read-all'));
     }
     assert.match(semgrep, /semgrep:[\s\S]*permissions:[\s\S]*security-events: write/);
     assert.match(codeql, /analyze:[\s\S]*permissions:[\s\S]*security-events: write/);

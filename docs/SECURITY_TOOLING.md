@@ -80,7 +80,7 @@ it. The job still enforces the scanner exit code after the SARIF upload step.
 
 Sensitive `security-events`, release-content, attestation, artifact-metadata, and
 OpenID Connect permissions are declared only on the jobs that require them. Every
-workflow otherwise defaults to `permissions: read-all` or a narrower read-only token.
+workflow otherwise defaults to the explicit `contents: read` permission.
 
 ## Property-based security tests
 
