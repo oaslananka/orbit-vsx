@@ -39,3 +39,8 @@ Taskfile.yml
 *.vsix
 .semgrep.yml
 sonar-project.properties
+
+.orbit-test-artifacts/
+.dockerignore
+scripts/
+tools/

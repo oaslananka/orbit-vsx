@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawn } from 'node:child_process';
 import { createElectronHostEnv } from './electronHostEnv';
+import { persistFailureArtifacts } from './failureArtifacts';
 
 interface TestProcessResult {
   code: number | null;
@@ -99,6 +100,7 @@ async function main(): Promise<void> {
       throw new Error(`Test run failed with code ${result.code ?? result.signal}`);
     }
   } catch (err) {
+    if (profileRoot) persistFailureArtifacts(profileRoot, 'extension-host', err);
     process.stderr.write(
       `Failed to run tests: ${err instanceof Error ? err.message : String(err)}\n`
     );

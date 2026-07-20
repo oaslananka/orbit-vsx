@@ -47,14 +47,14 @@ jobs:
         run: |
           corepack enable
           corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
-          pnpm --version
+          corepack pnpm --version
 
-      - run: pnpm install --frozen-lockfile
+      - run: corepack pnpm install --frozen-lockfile
 
-      - run: pnpm audit --audit-level moderate
+      - run: corepack pnpm audit --audit-level moderate
 
       - name: Run complete verification chain
-        run: xvfb-run -a pnpm run verify
+        run: xvfb-run -a corepack pnpm run verify
 
       - name: Generate SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
@@ -71,12 +71,12 @@ jobs:
       - name: Publish to VS Code Marketplace
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: pnpm exec vsce publish --no-dependencies --skip-duplicate --packagePath ./*.vsix
+        run: corepack pnpm exec vsce publish --no-dependencies --skip-duplicate --packagePath ./*.vsix
 
       - name: Publish to OpenVSX
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: pnpm exec ovsx publish --no-dependencies --skip-duplicate --packagePath ./*.vsix
+        run: corepack pnpm exec ovsx publish --no-dependencies --skip-duplicate --packagePath ./*.vsix
 
       - name: Create or update GitHub Release
         env:

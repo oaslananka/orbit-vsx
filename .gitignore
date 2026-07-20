@@ -6,6 +6,7 @@ out/
 coverage/
 .codex-checkpoints/
 .vscode-test/
+.orbit-test-artifacts/
 .DS_Store
 .env
 .env.*

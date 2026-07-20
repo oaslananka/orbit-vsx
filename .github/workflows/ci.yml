@@ -33,22 +33,35 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Install Electron runtime dependencies
+        run: sudo scripts/install-headless-deps.sh
+
       - name: Enable pnpm
         shell: bash
         run: |
           corepack enable
           corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
-          pnpm --version
+          corepack pnpm --version
 
-      - run: pnpm install --frozen-lockfile
+      - run: corepack pnpm install --frozen-lockfile
 
-      - run: pnpm audit --audit-level moderate
+      - run: corepack pnpm audit --audit-level moderate
 
       - name: Validate Renovate configuration
         if: matrix.node-version == '24'
-        run: pnpm run validate:renovate
+        run: corepack pnpm run validate:renovate
 
       - name: Run complete verification chain
         env:
+          ORBIT_TEST_ARTIFACTS_DIR: .orbit-test-artifacts/${{ matrix.node-version }}-${{ matrix.vscode-version }}
           ORBIT_VSCODE_TEST_VERSION: ${{ matrix.vscode-version }}
-        run: pnpm run verify:headless
+        run: corepack pnpm run verify:headless
+
+      - name: Upload extension-host failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: orbit-ci-${{ matrix.node-version }}-${{ matrix.vscode-version }}-${{ github.run_id }}
+          path: .orbit-test-artifacts
+          if-no-files-found: ignore
+          retention-days: 14

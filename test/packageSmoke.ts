@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import { createElectronHostEnv } from './electronHostEnv';
+import { persistFailureArtifacts } from './failureArtifacts';
 
 interface PackageManifest {
   name: string;
@@ -263,7 +264,10 @@ async function main(): Promise<void> {
       throw new Error(`Packaged smoke test failed with code ${result.code ?? result.signal}`);
     }
   } catch (err) {
-    if (profileRoot) dumpSmokeLogs(profileRoot);
+    if (profileRoot) {
+      dumpSmokeLogs(profileRoot);
+      persistFailureArtifacts(profileRoot, 'package-smoke', err);
+    }
     const errorMessage = err instanceof Error ? (err.stack ?? err.message) : String(err);
     process.stderr.write(`Failed to run packaged smoke test: ${errorMessage}\n`);
     process.exitCode = 1;

@@ -5,6 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const node_child_process_1 = require("node:child_process");
 const electronHostEnv_1 = require("./electronHostEnv");
+const failureArtifacts_1 = require("./failureArtifacts");
 const TEST_HOST_TIMEOUT_MS = 180000;
 function getVSCodeDownloadVersion() {
     const version = process.env.ORBIT_VSCODE_TEST_VERSION?.trim();
@@ -91,6 +92,8 @@ async function main() {
         }
     }
     catch (err) {
+        if (profileRoot)
+            (0, failureArtifacts_1.persistFailureArtifacts)(profileRoot, 'extension-host', err);
         process.stderr.write(`Failed to run tests: ${err instanceof Error ? err.message : String(err)}\n`);
         process.exitCode = 1;
     }

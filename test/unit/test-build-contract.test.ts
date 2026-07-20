@@ -21,11 +21,15 @@ suite('Test Build Contracts', () => {
 
     [
       '.commitlintrc.json',
+      '.dockerignore',
       '.gitattributes',
       '.npmrc',
       '.pnpm-store/',
       '.pre-commit-config.yaml',
       '.prettierignore',
+      '.orbit-test-artifacts/',
+      'scripts/',
+      'tools/',
       '.semgrep.yml',
       'sonar-project.properties',
     ].forEach((entry) => {
@@ -44,7 +48,7 @@ suite('Test Build Contracts', () => {
     );
     assert.ok(manifest.scripts.pretest?.includes('pnpm run test:compile'));
     assert.ok(manifest.scripts['pretest:unit']?.includes('pnpm run test:compile'));
-    assert.ok(manifest.scripts['smoke:package']?.startsWith('pnpm run test:compile'));
+    assert.ok(manifest.scripts['smoke:package']?.startsWith('corepack pnpm run test:compile'));
   });
 
   test('Should kill the full VS Code test process group on host timeout', () => {

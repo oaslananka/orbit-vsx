@@ -1,0 +1,105 @@
+name: VS Code Compatibility
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/compatibility.yml'
+      - 'tools/headless/**'
+      - 'scripts/install-headless-deps.sh'
+      - 'scripts/check-headless-runner.mjs'
+      - 'test/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    if: github.repository_owner == 'oaslananka' && github.event_name != 'pull_request'
+    name: VS Code ${{ matrix.vscode-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - vscode-version: stable
+            experimental: false
+          - vscode-version: insiders
+            experimental: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      - name: Install Electron runtime dependencies
+        run: sudo scripts/install-headless-deps.sh
+
+      - name: Enable repository pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
+          corepack pnpm --version
+
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm audit --audit-level moderate
+      - run: corepack pnpm run check:headless-runner
+
+      - name: Run compatibility verification
+        env:
+          ORBIT_TEST_ARTIFACTS_DIR: .orbit-test-artifacts/${{ matrix.vscode-version }}
+          ORBIT_VSCODE_TEST_VERSION: ${{ matrix.vscode-version }}
+        run: corepack pnpm run verify:headless
+
+      - name: Upload extension-host failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: orbit-compatibility-${{ matrix.vscode-version }}-${{ github.run_id }}
+          path: .orbit-test-artifacts
+          if-no-files-found: ignore
+          retention-days: 14
+
+  container:
+    if: github.repository_owner == 'oaslananka'
+    name: Clean headless container / VS Code stable
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build reproducible headless runner
+        run: docker build --file tools/headless/Dockerfile --target runner --tag orbit-vsx-headless:ci .
+
+      - name: Run stable verification in the clean runner
+        run: |
+          mkdir -p .orbit-test-artifacts/container
+          docker run --rm \
+            --shm-size=1g \
+            --env ORBIT_VSCODE_TEST_VERSION=stable \
+            --env ORBIT_TEST_ARTIFACTS_DIR=/artifacts \
+            --volume "${{ github.workspace }}/.orbit-test-artifacts/container:/artifacts" \
+            orbit-vsx-headless:ci \
+            corepack pnpm run verify:headless
+
+      - name: Upload container failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: orbit-container-stable-${{ github.run_id }}
+          path: .orbit-test-artifacts
+          if-no-files-found: ignore
+          retention-days: 14

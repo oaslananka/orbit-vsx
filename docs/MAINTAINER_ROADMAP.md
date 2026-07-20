@@ -42,3 +42,7 @@ An issue is done when:
 ## PR expectations
 
 PRs should be small enough to review in one pass. Large epics should be split into contract, implementation, docs, and cleanup PRs where possible.
+
+## Compatibility operations
+
+Use `HEADLESS_TESTING.md` for the required pull-request matrix, weekly stable/Insiders lanes, clean Docker runner, and VPS operator procedure.

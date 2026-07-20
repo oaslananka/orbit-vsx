@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Add weekly stable and non-blocking Insiders compatibility lanes, a reproducible headless Docker runner, retained extension-host failure logs, and Corepack-only pnpm resolution.
 - Apply Debug Recorder auto-tracking and editor-decoration setting changes without reloading VS Code, including initial-editor and document-edit refreshes.
 - Preserve typed audit targets while sanitizing field injection and dispose the audit channel with the extension lifecycle.
 - Honor Language Model Tool health refresh controls through the shared HealthStore and return deterministic, parseable JSON with explicit omission metadata.

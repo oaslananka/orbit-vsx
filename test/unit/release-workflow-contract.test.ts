@@ -14,10 +14,10 @@ suite('Release Workflow Contracts', () => {
     assert.ok(!workflow.includes('id-token: write'));
     assert.ok(workflow.includes('git merge-base --is-ancestor "$GITHUB_SHA" origin/main'));
     assert.ok(workflow.includes('tag_version="${GITHUB_REF_NAME#v}"'));
-    assert.ok(workflow.includes('xvfb-run -a pnpm run verify'));
+    assert.ok(workflow.includes('xvfb-run -a corepack pnpm run verify'));
     assert.ok(workflow.includes('pnpm audit --audit-level moderate'));
 
-    const verifyIndex = workflow.indexOf('xvfb-run -a pnpm run verify');
+    const verifyIndex = workflow.indexOf('xvfb-run -a corepack pnpm run verify');
     const marketplaceIndex = workflow.indexOf('Publish to VS Code Marketplace');
     const openVsxIndex = workflow.indexOf('Publish to OpenVSX');
     assert.ok(verifyIndex >= 0 && verifyIndex < marketplaceIndex);

@@ -38,6 +38,15 @@ including the packaged extension smoke test:
 task verify
 ```
 
+Verify the local Electron runtime or use the digest-pinned clean container:
+
+```bash
+corepack pnpm run check:headless-runner
+corepack pnpm run verify:container
+```
+
+See `docs/HEADLESS_TESTING.md` for stable, minimum-version, Insiders, and VPS-2 procedures.
+
 Install and run the local security hooks before submitting a security-sensitive
 change:
 
