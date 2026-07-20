@@ -118,8 +118,13 @@ Audit event fields:
 - `surface`: logical area such as `mcp`, `debug`, `network`, or `cli`;
 - `operation`: short operation identifier;
 - `outcome`: `started`, `success`, `failure`, or `blocked`;
-- `target`: redacted URL, file path, server name, or session id when useful;
+- `target_kind`: declared target type: `url`, `path`, `server`, `session`, or `identifier`;
+- `target`: URL-redacted value or a sanitized non-URL identifier appropriate to `target_kind`;
 - `detail`: small non-secret qualifier such as adapter type.
+
+All audit fields remove control characters, collapse whitespace, encode field separators,
+and enforce length limits so external values cannot inject extra lines or fields. The
+Audit output channel is disposed with the extension lifecycle.
 
 ## Release checks for security-sensitive changes
 

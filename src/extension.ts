@@ -12,6 +12,7 @@ import { registerMcpCommands } from './commands/mcp';
 import { McpExplorerProvider } from './panels/mcp/McpExplorerProvider';
 import { DebugDecorationProvider } from './decorations/DebugDecorationProvider';
 import { Logger } from './utils/logger';
+import { disposeAuditChannel } from './utils/audit';
 import { readConfig } from './config';
 import { initializeOrbitSecrets, registerSecretCommands } from './secrets';
 import { isWorkspaceTrusted } from './utils/workspaceTrust';
@@ -44,6 +45,7 @@ export function refreshStartupProviders(
 
 export function activate(context: vscode.ExtensionContext): void {
   const logger = new Logger('Orbit');
+  context.subscriptions.push({ dispose: disposeAuditChannel });
   logger.info('Orbit activated');
 
   const config = readConfig();

@@ -16,6 +16,7 @@ suite('Extension Lifecycle Contracts', () => {
       source,
       /context\.subscriptions\.push\(\s*healthStore,\s*healthProvider,\s*debugProvider,\s*a2aProvider,\s*mcpProvider,/
     );
+    assert.ok(source.includes('context.subscriptions.push({ dispose: disposeAuditChannel })'));
   });
 
   test('Should honor autoValidateOnSave without validating every edit', () => {

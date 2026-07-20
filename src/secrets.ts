@@ -23,17 +23,25 @@ export function getCachedDebugToken(): string {
 }
 
 async function clearLegacyTokenSetting(configKey: string): Promise<void> {
-  const config = vscode.workspace.getConfiguration();
-  const inspection = config.inspect<string>(configKey);
-  const clearTargets: vscode.ConfigurationTarget[] = [];
+  const rootConfig = vscode.workspace.getConfiguration();
+  const rootInspection = rootConfig.inspect<string>(configKey);
 
-  if (inspection?.globalValue) clearTargets.push(vscode.ConfigurationTarget.Global);
-  if (inspection?.workspaceValue) clearTargets.push(vscode.ConfigurationTarget.Workspace);
-  if (inspection?.workspaceFolderValue)
-    clearTargets.push(vscode.ConfigurationTarget.WorkspaceFolder);
+  if (rootInspection?.globalValue !== undefined) {
+    await rootConfig.update(configKey, undefined, vscode.ConfigurationTarget.Global);
+  }
+  if (rootInspection?.workspaceValue !== undefined) {
+    await rootConfig.update(configKey, undefined, vscode.ConfigurationTarget.Workspace);
+  }
+  if (rootInspection?.workspaceFolderValue !== undefined) {
+    await rootConfig.update(configKey, undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+  }
 
-  for (const target of clearTargets) {
-    await config.update(configKey, undefined, target);
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    const folderConfig = vscode.workspace.getConfiguration(undefined, folder.uri);
+    const folderInspection = folderConfig.inspect<string>(configKey);
+    if (folderInspection?.workspaceFolderValue !== undefined) {
+      await folderConfig.update(configKey, undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+    }
   }
 }
 
@@ -46,16 +54,14 @@ async function migrateLegacyToken(
   const existingSecret = await secrets.get(secretKey);
   if (existingSecret) {
     assign(existingSecret);
+    await clearLegacyTokenSetting(configKey);
     return;
   }
 
   const legacyToken = vscode.workspace.getConfiguration().get<string>(configKey, '').trim();
-  if (!legacyToken) {
-    assign('');
-    return;
+  if (legacyToken) {
+    await secrets.store(secretKey, legacyToken);
   }
-
-  await secrets.store(secretKey, legacyToken);
   assign(legacyToken);
   await clearLegacyTokenSetting(configKey);
 }
@@ -71,6 +77,7 @@ export async function initializeOrbitSecrets(secrets: vscode.SecretStorage): Pro
 
 async function setToken(
   secrets: vscode.SecretStorage,
+  configKey: string,
   secretKey: string,
   prompt: string,
   assign: (token: string) => void,
@@ -85,6 +92,7 @@ async function setToken(
   if (!token) return;
 
   await secrets.store(secretKey, token.trim());
+  await clearLegacyTokenSetting(configKey);
   assign(token.trim());
   refresh();
   vscode.window.showInformationMessage('Orbit token saved in VS Code SecretStorage.');
@@ -92,6 +100,7 @@ async function setToken(
 
 async function clearToken(
   secrets: vscode.SecretStorage,
+  configKey: string,
   secretKey: string,
   assign: (token: string) => void,
   refresh: () => void,
@@ -105,6 +114,7 @@ async function clearToken(
   if (confirm !== 'Clear Token') return;
 
   await secrets.delete(secretKey);
+  await clearLegacyTokenSetting(configKey);
   assign('');
   refresh();
   vscode.window.showInformationMessage(`${label} token cleared.`);
@@ -118,6 +128,7 @@ export function registerSecretCommands(
     vscode.commands.registerCommand(COMMAND_IDS.HEALTH_SET_TOKEN, async () => {
       await setToken(
         context.secrets,
+        CONFIG_KEYS.HEALTH_TOKEN,
         HEALTH_TOKEN_SECRET_KEY,
         'Enter bearer token for health-monitor-mcp',
         (token) => {
@@ -129,6 +140,7 @@ export function registerSecretCommands(
     vscode.commands.registerCommand(COMMAND_IDS.HEALTH_CLEAR_TOKEN, async () => {
       await clearToken(
         context.secrets,
+        CONFIG_KEYS.HEALTH_TOKEN,
         HEALTH_TOKEN_SECRET_KEY,
         (token) => {
           cachedSecrets.healthToken = token;
@@ -140,6 +152,7 @@ export function registerSecretCommands(
     vscode.commands.registerCommand(COMMAND_IDS.DEBUG_SET_TOKEN, async () => {
       await setToken(
         context.secrets,
+        CONFIG_KEYS.DEBUG_TOKEN,
         DEBUG_TOKEN_SECRET_KEY,
         'Enter bearer token for debug-recorder-mcp',
         (token) => {
@@ -151,6 +164,7 @@ export function registerSecretCommands(
     vscode.commands.registerCommand(COMMAND_IDS.DEBUG_CLEAR_TOKEN, async () => {
       await clearToken(
         context.secrets,
+        CONFIG_KEYS.DEBUG_TOKEN,
         DEBUG_TOKEN_SECRET_KEY,
         (token) => {
           cachedSecrets.debugToken = token;
