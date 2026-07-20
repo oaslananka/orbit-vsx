@@ -101,18 +101,35 @@ suite('Security Tooling Contracts', () => {
     }
   });
 
-  test('Should provide tokenless Semgrep CE in CI and pre-commit', () => {
+  test('Should provide tokenless digest-pinned Semgrep CE in CI and pre-commit', () => {
     const workflow = read('.github/workflows/semgrep.yml');
     const preCommit = read('.pre-commit-config.yaml');
     const rules = read('.semgrep.yml');
 
-    assert.match(workflow, /semgrep==\d+\.\d+\.\d+/);
+    assert.match(workflow, /semgrep\/semgrep:\d+\.\d+\.\d+@sha256:[a-f0-9]{64}/);
+    assert.match(workflow, /docker run --rm/);
     assert.match(workflow, /semgrep scan/);
     assert.match(workflow, /--sarif/);
+    assert.ok(!workflow.includes('pip install'));
     assert.ok(!workflow.includes('SEMGREP_APP_TOKEN'));
     assert.match(preCommit, /semgrep==\d+\.\d+\.\d+/);
     assert.match(preCommit, /\.semgrep\.yml/);
     assert.match(rules, /rules:/);
+  });
+
+  test('Should keep sensitive workflow permissions scoped to exact jobs', () => {
+    const semgrep = read('.github/workflows/semgrep.yml');
+    const codeql = read('.github/workflows/codeql.yml');
+    const release = read('.github/workflows/release.yml');
+
+    for (const workflow of [semgrep, codeql, release]) {
+      assert.match(workflow, /^permissions:\n  contents: read$/m);
+      assert.ok(!workflow.includes('permissions: read-all'));
+    }
+    assert.match(semgrep, /semgrep:[\s\S]*permissions:[\s\S]*security-events: write/);
+    assert.match(codeql, /analyze:[\s\S]*permissions:[\s\S]*security-events: write/);
+    assert.match(release, /release:[\s\S]*permissions:[\s\S]*contents: write/);
+    assert.match(release, /release:[\s\S]*permissions:[\s\S]*id-token: write/);
   });
 
   test('Should use existing SonarCloud and Snyk apps without duplicate workflows', () => {

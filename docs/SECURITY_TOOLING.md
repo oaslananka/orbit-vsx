@@ -73,9 +73,22 @@ version are themselves tracked by Renovate custom managers.
 schedule, and manual dispatch. It does not require `SEMGREP_APP_TOKEN`.
 
 The CI scan combines Semgrep's explicit TypeScript and JavaScript community rulesets with Orbit-specific rules in
-`.semgrep.yml`. Results are emitted as SARIF and uploaded to GitHub code scanning when
-the event permissions allow it. The job still enforces the scanner exit code after the
-SARIF upload step.
+`.semgrep.yml`. CI executes Semgrep 1.170.0 from an immutable multi-architecture image
+digest rather than installing mutable Python artifacts at workflow runtime. Results are
+emitted as SARIF and uploaded to GitHub code scanning when the event permissions allow
+it. The job still enforces the scanner exit code after the SARIF upload step.
+
+Sensitive `security-events`, release-content, attestation, artifact-metadata, and
+OpenID Connect permissions are declared only on the jobs that require them. Every
+workflow otherwise defaults to the explicit `contents: read` permission.
+
+## Property-based security tests
+
+`test/unit/security-fuzz.test.ts` uses the exact-pinned `fast-check` development
+package to exercise canonical JSON handling across hundreds of generated values and
+object insertion orders. These tests run inside both protected Node/VS Code CI lanes;
+they are deterministic by seed and augment, rather than replace, explicit security
+regression vectors.
 
 Managed Semgrep can be adopted later, but the tokenless CE workflow remains the minimum
 portable baseline.
