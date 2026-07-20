@@ -10,7 +10,7 @@ Orbit publishes three independent quality signals to the connected Codecov proje
 
 The `.github/workflows/codecov.yml` workflow uses GitHub OpenID Connect. It does not read `CODECOV_TOKEN` or any other repository secret. The workflow has read-only repository access at the top level and grants `id-token: write` only to its Codecov job.
 
-The checkout uses full history so Codecov can associate pull-request and merge commits accurately. All upload actions are pinned to immutable commit SHAs, and the generic bundle analyzer is an exact development dependency.
+The checkout uses full history so Codecov can associate pull-request and merge commits accurately. All upload actions are pinned to immutable commit SHAs, the Codecov CLI is pinned to `v11.3.1` with unused discovery plugins disabled, and the generic bundle analyzer is an exact development dependency.
 
 ## Enforcement model
 

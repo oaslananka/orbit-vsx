@@ -57,6 +57,8 @@ jobs:
           fail_ci_if_error: true
           flags: unit
           name: node-24-unit
+          plugins: noop
+          version: v11.3.1
 
       - name: Upload JUnit test results
         if: ${{ !cancelled() && hashFiles('.test-results/junit.xml') != '' }}
@@ -68,6 +70,8 @@ jobs:
           fail_ci_if_error: true
           flags: unit
           name: node-24-unit
+          plugins: noop
+          version: v11.3.1
           report_type: test_results
 
       - name: Enforce report generation

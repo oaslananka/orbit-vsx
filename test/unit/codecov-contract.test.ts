@@ -56,6 +56,8 @@ suite('Codecov Contracts', () => {
     assert.match(workflow, /files: coverage\/lcov\.info/);
     assert.match(workflow, /files: \.test-results\/junit\.xml/);
     assert.match(workflow, /report_type: test_results/);
+    assert.strictEqual(Array.from(workflow.matchAll(/plugins: noop/g)).length, 2);
+    assert.strictEqual(Array.from(workflow.matchAll(/version: v11\.3\.1/g)).length, 2);
     assert.match(workflow, /disable_search: true/g);
     assert.match(workflow, /fail_ci_if_error: true/g);
     assert.ok(!workflow.includes('CODECOV_TOKEN'));
