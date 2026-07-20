@@ -406,7 +406,7 @@
         "orbit.debug.autoTrackVscodeSessions": {
           "type": "boolean",
           "default": false,
-          "description": "Offer to create and close Debug Recorder sessions when VS Code debug sessions start and stop."
+          "description": "Automatically create and close matching Debug Recorder sessions when VS Code debug sessions start and stop."
         },
         "orbit.debug.showEditorDecorations": {
           "type": "boolean",

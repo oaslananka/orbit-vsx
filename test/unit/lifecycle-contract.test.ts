@@ -25,6 +25,24 @@ suite('Extension Lifecycle Contracts', () => {
     assert.ok(!source.includes('vscode.workspace.onDidChangeTextDocument'));
   });
 
+  test('Should associate VS Code debug sessions with Orbit sessions through a lifecycle tracker', () => {
+    const source = readSource('src/extension.ts');
+
+    assert.ok(source.includes('new DebugSessionTracker('));
+    assert.ok(source.includes('tracker.start({ id: session.id, name: session.name })'));
+    assert.ok(source.includes('tracker.terminate({ id: session.id, name: session.name })'));
+    assert.ok(source.includes('await tracker?.shutdown()'));
+  });
+
+  test('Should apply the configured visible-session limit and recent window', () => {
+    const providerSource = readSource('src/panels/debug/DebugProvider.ts');
+
+    assert.ok(providerSource.includes('buildDebugSessionGroups('));
+    assert.ok(providerSource.includes('config.debug.maxSessionsShown'));
+    assert.ok(providerSource.includes("new DebugGroupItem('Recent (7 days)'"));
+    assert.ok(providerSource.includes('return this.visibleSessionCount'));
+  });
+
   test('Should keep health polling cancellable and non-overlapping', () => {
     const source = readSource('src/panels/health/HealthStore.ts');
 

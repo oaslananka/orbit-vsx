@@ -3,6 +3,7 @@ import { readConfig } from '../../config';
 import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants';
 import { DebugClient } from './DebugClient';
 import type { DebugSession } from './types';
+import { buildDebugSessionGroups } from './sessionView';
 import { Logger } from '../../utils/logger';
 import { createDebugDetailWebview } from './DebugWebviewPanel';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
@@ -60,6 +61,7 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
   private recentGroup: DebugGroupItem | undefined;
   private _error: string | undefined;
   private _loading = false;
+  private visibleSessionCount = 0;
 
   constructor(private _context: vscode.ExtensionContext) {
     this.logger = new Logger('Orbit:Debug');
@@ -86,14 +88,14 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
       const config = readConfig();
       if (!isWorkspaceTrusted()) {
         this.sessions = [];
-        this.buildGroups();
+        this.buildGroups(config.debug.maxSessionsShown);
         this._error = WORKSPACE_TRUST_REQUIRED_MESSAGE;
       } else if (config.debug.enabled) {
         this.sessions = await this.client.listSessions();
-        this.buildGroups();
+        this.buildGroups(config.debug.maxSessionsShown);
       } else {
         this.sessions = [];
-        this.buildGroups();
+        this.buildGroups(config.debug.maxSessionsShown);
       }
       if (isWorkspaceTrusted()) {
         this._error = undefined;
@@ -106,13 +108,13 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
     this._onDidChangeTreeData.fire(undefined);
   }
 
-  private buildGroups(): void {
-    const active = this.sessions.filter((s) => s.status === 'open');
-    const recent = this.sessions.filter((s) => s.status !== 'open');
-
-    this.activeGroup = active.length > 0 ? new DebugGroupItem('Active', active) : undefined;
+  private buildGroups(maxSessionsShown: number): void {
+    const groups = buildDebugSessionGroups(this.sessions, maxSessionsShown);
+    this.visibleSessionCount = groups.visibleCount;
+    this.activeGroup =
+      groups.active.length > 0 ? new DebugGroupItem('Active', groups.active) : undefined;
     this.recentGroup =
-      recent.length > 0 ? new DebugGroupItem('Recent (7 days)', recent) : undefined;
+      groups.recent.length > 0 ? new DebugGroupItem('Recent (7 days)', groups.recent) : undefined;
   }
 
   getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
@@ -178,7 +180,7 @@ export class DebugProvider implements vscode.TreeDataProvider<vscode.TreeItem>, 
   }
 
   getCount(): number {
-    return this.sessions.length;
+    return this.visibleSessionCount;
   }
 
   onConfigChanged(): void {

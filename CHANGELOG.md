@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Track concurrent VS Code debug sessions through their matching Debug Recorder session IDs and close each mapped session exactly once on termination or extension shutdown.
+- Apply `orbit.debug.maxSessionsShown` after deterministic sorting and restrict the `Recent (7 days)` group to sessions updated within that window.
 - Align Agent Card validation with the A2A 1.0 ProtoJSON model, including security scheme wrappers, canonical security requirements, and `capabilities.extendedAgentCard`.
 - Normalize supported pre-1.0 security scheme and `security` requirement shapes into the canonical runtime model before rendering or exposing them through Language Model Tools.
 

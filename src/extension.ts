@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { HealthProvider } from './panels/health/HealthProvider';
 import { HealthStore } from './panels/health/HealthStore';
 import { DebugProvider } from './panels/debug/DebugProvider';
+import { DebugSessionTracker } from './panels/debug/DebugSessionTracker';
 import { A2AProvider } from './panels/a2a/A2AProvider';
 import { StatusBarController } from './statusbar/StatusBarController';
 import { registerHealthCommands } from './commands/health';
@@ -17,6 +18,8 @@ import { isWorkspaceTrusted } from './utils/workspaceTrust';
 import { validateAgentCardText } from './panels/a2a/agentCardValidation';
 import { registerNativeMcpProvider } from './mcp/nativeMcpProvider';
 import { registerOrbitLanguageModelTools } from './lm/orbitTools';
+
+let activeDebugSessionTracker: DebugSessionTracker | undefined;
 
 interface StartupRefreshProvider {
   refresh(): Promise<void> | void;
@@ -134,19 +137,20 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   if (config.debug.autoTrackVscodeSessions) {
+    const tracker = new DebugSessionTracker(
+      () => debugProvider.getClient(),
+      logger,
+      () => debugProvider.refresh()
+    );
+    activeDebugSessionTracker = tracker;
     context.subscriptions.push(
       vscode.debug.onDidStartDebugSession((session) => {
-        logger.info(`VS Code debug session started: ${session.name}`);
-        debugProvider
-          .getClient()
-          .startDebugSession(session.name)
-          .catch((err) => {
-            logger.warn(`Failed to auto-track debug start: ${err.message}`);
-          });
+        void tracker.start({ id: session.id, name: session.name });
       }),
       vscode.debug.onDidTerminateDebugSession((session) => {
-        logger.info(`VS Code debug session terminated: ${session.name}`);
-      })
+        void tracker.terminate({ id: session.id, name: session.name });
+      }),
+      tracker
     );
   }
 
@@ -209,4 +213,8 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void {}
+export async function deactivate(): Promise<void> {
+  const tracker = activeDebugSessionTracker;
+  activeDebugSessionTracker = undefined;
+  await tracker?.shutdown();
+}
