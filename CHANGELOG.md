@@ -7,6 +7,11 @@
 - Align Agent Card validation with the A2A 1.0 ProtoJSON model, including security scheme wrappers, canonical security requirements, and `capabilities.extendedAgentCard`.
 - Normalize supported pre-1.0 security scheme and `security` requirement shapes into the canonical runtime model before rendering or exposing them through Language Model Tools.
 
+### Security
+
+- Harden untrusted Agent Card discovery with bounded manual redirects, DNS address policy checks, IP-pinned HTTPS connections, and a streaming 256 KiB response limit.
+- Report blocked discovery policy outcomes without exposing URL credentials or query values in audit output.
+
 ## [0.5.7] - 2026-06-11
 
 ### Fixed

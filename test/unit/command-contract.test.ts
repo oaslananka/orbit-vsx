@@ -1,6 +1,7 @@
 import * as assert from 'node:assert';
 import * as Module from 'node:module';
 import { COMMAND_IDS } from '../../src/constants';
+import { PublicNetworkPolicyError } from '../../src/utils/publicJsonFetch';
 import type * as A2ACommandsModule from '../../src/commands/a2a';
 import type * as DebugCommandsModule from '../../src/commands/debug';
 import type * as HealthCommandsModule from '../../src/commands/health';
@@ -19,6 +20,7 @@ type ExtensionContext = {
 const moduleWithLoad = Module as unknown as ModuleWithLoad;
 const originalLoad = moduleWithLoad._load;
 const registeredCommands = new Map<string, CommandCallback>();
+const auditLines: string[] = [];
 const executedCommands: string[] = [];
 const errorMessages: string[] = [];
 const informationMessages: string[] = [];
@@ -67,6 +69,12 @@ const vscodeMock = {
     getWorkspaceFolder: (): undefined => undefined,
   },
   window: {
+    createOutputChannel: (): { appendLine(value: string): void; dispose(): void } => ({
+      appendLine: (value: string): void => {
+        auditLines.push(value);
+      },
+      dispose: (): void => undefined,
+    }),
     showErrorMessage: (message: string): void => {
       errorMessages.push(message);
     },
@@ -104,6 +112,7 @@ function createContext(): ExtensionContext {
 
 function resetRegistrations(): void {
   registeredCommands.clear();
+  auditLines.length = 0;
   executedCommands.length = 0;
   errorMessages.length = 0;
   informationMessages.length = 0;
@@ -339,6 +348,32 @@ suite('Command Contracts', () => {
       'detail:agent',
     ]);
     assert.strictEqual(informationMessages.length, 1);
+  });
+
+  test('Should audit Agent Card network policy blocks without leaking URL secrets', async () => {
+    registerA2ACommands(
+      createContext() as never,
+      {
+        getClient: () => ({
+          fetchAgentCard: async (): Promise<never> => {
+            throw new PublicNetworkPolicyError(
+              'blocked_address',
+              'Agent Card hostname resolved to a non-public address.'
+            );
+          },
+        }),
+      } as never
+    );
+
+    inputBoxResponses.push('https://agent.example/card.json?token=secret');
+    await callback(COMMAND_IDS.A2A_DISCOVER)();
+
+    const blockedAudit = auditLines.find(
+      (line) => line.includes('operation=discover_agent_card') && line.includes('outcome=blocked')
+    );
+    assert.ok(blockedAudit, 'policy block should be audited as blocked');
+    assert.match(blockedAudit, /detail=blocked_address/);
+    assert.ok(!blockedAudit.includes('secret'));
   });
 
   test('Should surface MCP refresh failures', async () => {

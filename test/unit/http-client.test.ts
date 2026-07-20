@@ -320,18 +320,25 @@ suite('HTTP and Client Contracts', () => {
       ],
       requests
     );
-    const client = new A2AClient('http://127.0.0.1:3099', 'a2a-warp');
+    const discoveryRequests: string[] = [];
+    const client = new A2AClient(
+      'http://127.0.0.1:3099',
+      'a2a-warp',
+      async (url): Promise<unknown> => {
+        discoveryRequests.push(url);
+        return agentCard('agent-b');
+      }
+    );
 
     const agents = await client.listAgents();
 
     assert.strictEqual(agents[0]?.card.name, 'agent-a');
     assert.strictEqual(requests[0]?.url, 'http://127.0.0.1:3099/agents');
 
-    installJsonFetch(agentCard('agent-b'), requests);
     const card = await client.fetchAgentCard('https://example.com/agent-card.json');
 
     assert.strictEqual(card.name, 'agent-b');
-    assert.strictEqual(requests[1]?.url, 'https://example.com/agent-card.json');
+    assert.strictEqual(discoveryRequests[0], 'https://example.com/agent-card.json');
     assert.strictEqual(
       client.getAgentCardDiscoveryUrl('https://agent.example.com'),
       'https://agent.example.com/.well-known/agent-card.json'

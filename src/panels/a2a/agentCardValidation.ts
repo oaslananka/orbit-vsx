@@ -1,4 +1,5 @@
 import { normalizeHttpUrl } from '../../utils/urlSafety';
+import { AGENT_CARD_MAX_JSON_BYTES } from './constants';
 import type {
   AgentCapabilities,
   AgentCard,
@@ -15,7 +16,6 @@ import type {
   ValidationResult,
 } from './types';
 
-const MAX_CARD_JSON_BYTES = 256 * 1024;
 const WELL_KNOWN_AGENT_CARD_PATH = '/.well-known/agent-card.json';
 const SECRET_KEY_PATTERN =
   /(^|[-_.])(password|passwd|secret|token|access[_-]?key|private[_-]?key|client[_-]?secret)([-_.]|$)/i;
@@ -176,7 +176,7 @@ export function validateAgentCardPayload(value: unknown, path = '$'): AgentCard 
 }
 
 export function validateAgentCardText(text: string): ValidationResult {
-  if (Buffer.byteLength(text, 'utf8') > MAX_CARD_JSON_BYTES) {
+  if (Buffer.byteLength(text, 'utf8') > AGENT_CARD_MAX_JSON_BYTES) {
     return resultFromIssues([{ path: '$', message: 'agent card JSON is too large' }]);
   }
   try {

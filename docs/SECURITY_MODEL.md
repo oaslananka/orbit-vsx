@@ -13,7 +13,7 @@ controls, and audit expectations for Orbit features.
 | Health Monitor MCP endpoint | User-configured         | URL normalization, SecretStorage token retrieval, JSON-RPC envelope/result validation              |
 | Debug Recorder MCP endpoint | User-configured         | URL normalization, SecretStorage token retrieval, JSON-RPC envelope/result validation              |
 | A2A registry endpoint       | User-configured         | URL normalization, registry response validation, Agent Card validation before rendering            |
-| Discovered Agent Card URL   | No                      | Public HTTPS only, no URL credentials, no localhost/private-network targets                        |
+| Discovered Agent Card URL   | No                      | Public HTTPS, manual redirects, DNS/IP policy checks, pinned TLS connection, bounded response body |
 | Local A2A CLI               | No                      | Workspace Trust required, bounded timeout, selected workspace cwd, collision checks for scaffold   |
 | Webviews                    | No direct trust         | CSP, nonce scripts, local resource roots, command allowlist, escaped/serialized data               |
 
@@ -24,6 +24,13 @@ controls, and audit expectations for Orbit features.
 - Audit output must not include bearer tokens, URL credentials, query parameter
   values, command stdout containing secrets, or raw Agent Card credential fields.
 - Network error messages use redacted URLs.
+- Untrusted Agent Card discovery resolves every hostname before each request, rejects
+  the destination if any answer is non-public, and connects to a validated IP while
+  preserving the original hostname for HTTP Host, SNI, and certificate verification.
+- Redirects are handled manually, revalidated at every hop, limited to five hops,
+  and rejected on loops, HTTP downgrade, credentials, or non-public destinations.
+- Agent Card response bodies are limited to 256 KiB while streaming; oversized
+  `Content-Length` values are rejected before body buffering.
 - A2A Agent Cards are validated before trusted rendering. Cards must not include
   credential material such as access keys, passwords, private keys, or tokens.
 - Local `agent-card.json` scans are limited by `orbit.a2a.localCardScanLimit` and
@@ -58,6 +65,14 @@ MCP JSON-RPC validation checks:
 - server error code and message shape;
 - method-specific Health and Debug result objects.
 
+A2A discovery transport checks:
+
+- HTTPS-only URLs with no embedded credentials;
+- manual, bounded redirect handling with destination revalidation;
+- all DNS answers against blocked IPv4 and IPv6 special-use ranges;
+- connection pinning to a checked address with hostname-based TLS verification;
+- early and streaming enforcement of the Agent Card byte limit.
+
 A2A validation checks:
 
 - A2A 1.0 ProtoJSON security-scheme oneof wrappers (`apiKeySecurityScheme`,
@@ -91,6 +106,12 @@ Current audited surfaces:
 | Debug       | `start_debug_session`, `close_debug_session`, `record_command` |
 | A2A network | `discover_agent_card`                                          |
 | A2A CLI     | `validate_agent_card`, `scaffold_agent`                        |
+
+The transport prevents DNS rebinding between policy evaluation and connection by
+using the checked IP directly. It cannot prevent a legitimate public server from
+proxying requests to its own internal resources; server-side behavior remains outside
+the extension's trust boundary. User-configured registry endpoints intentionally keep
+their existing private-network policy and do not use this untrusted-discovery path.
 
 Audit event fields:
 

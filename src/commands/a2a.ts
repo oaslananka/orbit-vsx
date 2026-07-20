@@ -5,6 +5,7 @@ import type { A2AProvider } from '../panels/a2a/A2AProvider';
 import { COMMAND_IDS } from '../constants';
 import { requireWorkspaceTrust } from '../utils/workspaceTrust';
 import { recordAuditEvent } from '../utils/audit';
+import { isPublicNetworkPolicyError } from '../utils/publicJsonFetch';
 
 function getWorkspaceFolderForUri(uri: vscode.Uri): vscode.WorkspaceFolder | undefined {
   return vscode.workspace.getWorkspaceFolder(uri);
@@ -123,11 +124,13 @@ export function registerA2ACommands(
         });
         a2aProvider.openDetailWebviewFromCard(card);
       } catch (error) {
+        const policyError = isPublicNetworkPolicyError(error) ? error : undefined;
         recordAuditEvent({
           surface: 'network',
           operation: 'discover_agent_card',
-          outcome: 'failure',
+          outcome: policyError ? 'blocked' : 'failure',
           target: url,
+          ...(policyError ? { detail: policyError.code } : {}),
         });
         vscode.window.showErrorMessage(
           `Failed to discover agent: ${error instanceof Error ? error.message : String(error)}`

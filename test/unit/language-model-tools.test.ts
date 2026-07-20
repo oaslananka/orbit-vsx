@@ -220,6 +220,7 @@ suite('Language Model Tools', () => {
 
     assert.ok(source.includes('assertWorkspaceTrusted();'));
     assert.ok(source.includes('recordToolAudit('));
+    assert.ok(source.includes("isPublicNetworkPolicyError(error) ? 'blocked' : 'failure'"));
     assert.ok(source.includes('MAX_TEXT_LENGTH'));
   });
 });

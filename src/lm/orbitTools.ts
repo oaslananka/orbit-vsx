@@ -12,6 +12,7 @@ import type { DebugSession } from '../panels/debug/types';
 import type { HealthProvider } from '../panels/health/HealthProvider';
 import type { McpServer } from '../panels/health/types';
 import { recordAuditEvent } from '../utils/audit';
+import { isPublicNetworkPolicyError } from '../utils/publicJsonFetch';
 import { redactUrl } from '../utils/urlSafety';
 import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../utils/workspaceTrust';
 
@@ -308,10 +309,12 @@ class ValidateAgentCardTool implements vscode.LanguageModelTool<ValidateAgentCar
         validation: { errors: [], valid: true },
       });
     } catch (error) {
+      const policyError = isPublicNetworkPolicyError(error) ? error : undefined;
       recordToolAudit(
         ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
-        'failure',
-        options.input.url
+        isPublicNetworkPolicyError(error) ? 'blocked' : 'failure',
+        options.input.url,
+        policyError?.code
       );
       throw asToolError(error);
     }
@@ -333,10 +336,16 @@ function jsonToolResult(value: unknown): vscode.LanguageModelToolResult {
 function recordToolAudit(
   tool: string,
   outcome: 'started' | 'success' | 'failure' | 'blocked',
-  target?: string
+  target?: string,
+  detail?: string
 ): void {
-  const event = { operation: tool, outcome, surface: 'mcp' as const };
-  recordAuditEvent(target ? { ...event, target } : event);
+  recordAuditEvent({
+    operation: tool,
+    outcome,
+    surface: 'mcp',
+    ...(target ? { target } : {}),
+    ...(detail ? { detail } : {}),
+  });
 }
 
 function summarizeMcpServer(server: McpServer, includePipelines = false): Record<string, unknown> {

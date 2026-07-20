@@ -1,0 +1,1 @@
+export const AGENT_CARD_MAX_JSON_BYTES = 256 * 1024;

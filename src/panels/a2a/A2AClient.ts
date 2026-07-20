@@ -1,6 +1,8 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { getJson } from '../../utils/http';
+import { fetchPublicJson } from '../../utils/publicJsonFetch';
+import { AGENT_CARD_MAX_JSON_BYTES } from './constants';
 import { joinUrl, normalizeHttpUrl } from '../../utils/urlSafety';
 import {
   resolveAgentCardDiscoveryUrl,
@@ -11,11 +13,15 @@ import {
 import type { AgentCard, AgentRegistryEntry, ValidationResult } from './types';
 
 const execFileAsync = promisify(execFile);
+type DiscoveryJsonFetcher = (url: string) => Promise<unknown>;
+const defaultDiscoveryJsonFetcher: DiscoveryJsonFetcher = (url) =>
+  fetchPublicJson(url, { maxBytes: AGENT_CARD_MAX_JSON_BYTES });
 
 export class A2AClient {
   constructor(
     private registryUrl: string,
-    private cliPath: string
+    private cliPath: string,
+    private readonly discoveryJsonFetcher: DiscoveryJsonFetcher = defaultDiscoveryJsonFetcher
   ) {
     this.registryUrl = normalizeHttpUrl(registryUrl, {
       allowLocalhost: true,
@@ -48,7 +54,7 @@ export class A2AClient {
 
   async fetchAgentCard(url: string): Promise<AgentCard> {
     const safeUrl = resolveAgentCardDiscoveryUrl(url);
-    const payload = await getJson<unknown>(safeUrl, undefined, 15000);
+    const payload = await this.discoveryJsonFetcher(safeUrl);
     return validateAgentCardPayload(payload);
   }
 
