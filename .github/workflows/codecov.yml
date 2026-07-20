@@ -1,0 +1,88 @@
+name: Codecov
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality-observability:
+    if: github.repository_owner == 'oaslananka'
+    name: Coverage, tests, and bundles
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
+          corepack pnpm --version
+
+      - run: corepack pnpm install --frozen-lockfile
+
+      - run: corepack pnpm audit --audit-level moderate
+
+      - name: Generate LCOV and JUnit reports
+        id: reports
+        continue-on-error: true
+        run: corepack pnpm run quality:reports
+
+      - name: Upload LCOV coverage
+        if: ${{ !cancelled() && hashFiles('coverage/lcov.info') != '' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          use_oidc: true
+          files: coverage/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
+          flags: unit
+          name: node-24-unit
+          plugins: noop
+          version: v11.3.1
+
+      - name: Upload JUnit test results
+        if: ${{ !cancelled() && hashFiles('.test-results/junit.xml') != '' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          use_oidc: true
+          files: .test-results/junit.xml
+          disable_search: true
+          fail_ci_if_error: true
+          flags: unit
+          name: node-24-unit
+          plugins: noop
+          version: v11.3.1
+          report_type: test_results
+
+      - name: Enforce report generation
+        if: ${{ always() }}
+        env:
+          REPORTS_OUTCOME: ${{ steps.reports.outcome }}
+        shell: bash
+        run: test "$REPORTS_OUTCOME" = success
+
+      - name: Build production bundles
+        run: corepack pnpm run build:prod
+
+      - name: Upload production bundle analysis
+        run: corepack pnpm run quality:bundle:codecov

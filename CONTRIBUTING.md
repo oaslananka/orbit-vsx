@@ -102,3 +102,7 @@ README.
 Do not include credentials, tokens, cookies, private keys, or private service
 URLs in issues, pull requests, logs, screenshots, or test fixtures. Follow
 `SECURITY.md` for vulnerability reports.
+
+## Quality observability
+
+See [`docs/CODECOV.md`](docs/CODECOV.md) for local LCOV, JUnit Test Analytics, and production bundle verification.

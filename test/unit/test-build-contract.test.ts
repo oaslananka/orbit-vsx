@@ -32,6 +32,9 @@ suite('Test Build Contracts', () => {
       'tools/',
       '.semgrep.yml',
       'sonar-project.properties',
+      '.test-results/',
+      'codecov.yml',
+      'codecov-bundle.config.json',
     ].forEach((entry) => {
       assert.match(vscodeignore, new RegExp(`^${escapeRegExp(entry)}$`, 'm'));
     });

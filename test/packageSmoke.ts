@@ -42,7 +42,13 @@ function findPackagedVsix(): string {
   return vsixPath;
 }
 
-const FORBIDDEN_PACKAGE_ENTRIES = ['extension/.semgrep.yml', 'extension/sonar-project.properties'];
+const FORBIDDEN_PACKAGE_ENTRIES = [
+  'extension/.semgrep.yml',
+  'extension/sonar-project.properties',
+  'extension/codecov.yml',
+  'extension/codecov-bundle.config.json',
+];
+const FORBIDDEN_PACKAGE_PREFIXES = ['extension/coverage/', 'extension/.test-results/'];
 
 function assertPackagedContents(vsixPath: string): void {
   const result = spawnSync('unzip', ['-Z1', vsixPath], {
@@ -66,7 +72,11 @@ function assertPackagedContents(vsixPath: string): void {
     throw new Error(`Packaged VSIX must not contain dist source maps: ${sourceMaps.join(', ')}`);
   }
 
-  const forbiddenEntries = entries.filter((entry) => FORBIDDEN_PACKAGE_ENTRIES.includes(entry));
+  const forbiddenEntries = entries.filter(
+    (entry) =>
+      FORBIDDEN_PACKAGE_ENTRIES.includes(entry) ||
+      FORBIDDEN_PACKAGE_PREFIXES.some((prefix) => entry.startsWith(prefix))
+  );
   if (forbiddenEntries.length > 0) {
     throw new Error(
       `Packaged VSIX must not contain maintainer-only files: ${forbiddenEntries.join(', ')}`

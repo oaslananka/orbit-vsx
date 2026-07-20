@@ -20,6 +20,9 @@ pnpm-workspace.yaml
 .c8rc.json
 .commitlintrc.json
 coverage/
+.test-results/
+codecov.yml
+codecov-bundle.config.json
 .gitattributes
 AGENTS.md
 CODE_OF_CONDUCT.md

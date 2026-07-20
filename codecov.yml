@@ -1,0 +1,38 @@
+codecov:
+  require_ci_to_pass: true
+
+coverage:
+  precision: 2
+  round: down
+  range: 70..100
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
+    patch:
+      default:
+        target: 70%
+        threshold: 5%
+        informational: true
+
+flags:
+  unit:
+    paths:
+      - src/
+    carryforward: false
+
+comment:
+  layout: 'reach, diff, flags, files'
+  behavior: default
+  require_changes: true
+  require_bundle_changes: true
+  bundle_change_threshold: '1Kb'
+
+github_checks:
+  annotations: true
+
+bundle_analysis:
+  warning_threshold: '5%'
+  status: informational
