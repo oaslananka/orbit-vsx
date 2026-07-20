@@ -73,6 +73,10 @@ export class HealthProvider
     return (await this.store.refresh()).dashboard;
   }
 
+  async refreshDashboard(): Promise<DashboardData> {
+    return (await this.store.refresh()).dashboard;
+  }
+
   registerServer(name: string, url: string): Promise<void> {
     return this.store.registerServer(name, url);
   }

@@ -49,9 +49,13 @@ function repoRoot(): string {
   return path.resolve(__dirname, '../..');
 }
 
-function parseResult(result: unknown): unknown {
+function resultText(result: unknown): string {
   const value = result as ToolResult;
-  return JSON.parse(value.content[0]?.value ?? '{}');
+  return value.content[0]?.value ?? '{}';
+}
+
+function parseResult(result: unknown): unknown {
+  return JSON.parse(resultText(result));
 }
 
 function validAgentCard(): Record<string, unknown> {
@@ -215,6 +219,149 @@ suite('Language Model Tools', () => {
     assert.strictEqual(validationResult.validation.valid, true);
   });
 
+  test('Should honor health refresh controls without bypassing the shared provider contract', async () => {
+    let cacheReads = 0;
+    let cacheFirstReads = 0;
+    let forcedRefreshes = 0;
+    const dashboard = {
+      servers: [],
+      summary: { degraded: 0, down: 0, total: 0, up: 0 },
+    };
+    const context = { subscriptions: [] as Disposable[] };
+    orbitTools.registerOrbitLanguageModelTools(
+      context as never,
+      {
+        a2aProvider: { getClient: () => ({ listAgents: async () => [] }) },
+        debugProvider: { getClient: () => ({}) },
+        healthProvider: {
+          getDashboard: async () => {
+            cacheFirstReads += 1;
+            return dashboard;
+          },
+          getState: () => {
+            cacheReads += 1;
+            return { dashboard };
+          },
+          refreshDashboard: async () => {
+            forcedRefreshes += 1;
+            return dashboard;
+          },
+        },
+      } as never
+    );
+
+    const tool = registeredTools.get(orbitTools.ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_MCP_HEALTH);
+    await tool?.invoke({ input: { refresh: false } });
+    await tool?.invoke({ input: { refresh: true } });
+    await tool?.invoke({ input: {} });
+
+    assert.strictEqual(cacheReads, 1);
+    assert.strictEqual(forcedRefreshes, 1);
+    assert.strictEqual(cacheFirstReads, 1);
+  });
+
+  test('Should return parseable bounded JSON with explicit omission metadata', async () => {
+    const huge = 'x'.repeat(20_000);
+    const context = { subscriptions: [] as Disposable[] };
+    orbitTools.registerOrbitLanguageModelTools(
+      context as never,
+      {
+        a2aProvider: { getClient: () => ({ listAgents: async () => [] }) },
+        debugProvider: {
+          getClient: () => ({
+            getSessionContext: async () => ({
+              createdAt: '2026-06-24T00:00:00.000Z',
+              description: huge,
+              errorText: huge,
+              fixAttempts: Array.from({ length: 100 }, (_, index) => ({
+                description: `${index}:${huge}`,
+                id: `fix-${index}`,
+                successful: false,
+                timestamp: '2026-06-24T00:00:00.000Z',
+              })),
+              id: 'session-large',
+              status: 'open',
+              tags: Array.from({ length: 100 }, (_, index) => `${index}:${huge}`),
+              terminalCommands: Array.from({ length: 100 }, (_, index) => ({
+                command: `${index}:${huge}`,
+                timestamp: '2026-06-24T00:00:00.000Z',
+              })),
+              title: huge,
+              updatedAt: '2026-06-24T00:00:00.000Z',
+            }),
+          }),
+        },
+        healthProvider: {
+          getDashboard: async () => ({
+            servers: [],
+            summary: { degraded: 0, down: 0, total: 0, up: 0 },
+          }),
+          getState: () => ({
+            dashboard: { servers: [], summary: { degraded: 0, down: 0, total: 0, up: 0 } },
+          }),
+          refreshDashboard: async () => ({
+            servers: [],
+            summary: { degraded: 0, down: 0, total: 0, up: 0 },
+          }),
+        },
+      } as never
+    );
+
+    const result = await registeredTools
+      .get(orbitTools.ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_DEBUG_SESSION_CONTEXT)
+      ?.invoke({ input: { sessionId: 'session-large' } });
+    const text = resultText(result);
+    const parsed = JSON.parse(text) as {
+      _meta: { characterLimit: number; omitted: string[]; truncated: boolean };
+    };
+
+    assert.ok(text.length <= 4000, `tool output should be bounded, received ${text.length}`);
+    assert.strictEqual(parsed._meta.characterLimit, 4000);
+    assert.strictEqual(parsed._meta.truncated, true);
+    assert.ok(parsed._meta.omitted.length > 0);
+  });
+
+  test('Should reject malformed input and cancelled invocations consistently', async () => {
+    const context = { subscriptions: [] as Disposable[] };
+    orbitTools.registerOrbitLanguageModelTools(
+      context as never,
+      {
+        a2aProvider: { getClient: () => ({ listAgents: async () => [] }) },
+        debugProvider: {
+          getClient: () => ({ searchSessions: async () => ({ sessions: [], total: 0 }) }),
+        },
+        healthProvider: {
+          getDashboard: async () => ({
+            servers: [],
+            summary: { degraded: 0, down: 0, total: 0, up: 0 },
+          }),
+          getState: () => ({
+            dashboard: { servers: [], summary: { degraded: 0, down: 0, total: 0, up: 0 } },
+          }),
+          refreshDashboard: async () => ({
+            servers: [],
+            summary: { degraded: 0, down: 0, total: 0, up: 0 },
+          }),
+        },
+      } as never
+    );
+
+    await assert.rejects(
+      () =>
+        registeredTools
+          .get(orbitTools.ORBIT_LANGUAGE_MODEL_TOOL_NAMES.SEARCH_DEBUG_SESSIONS)
+          ?.invoke({ input: { query: '   ' } }) as Promise<unknown>,
+      /query must be a non-empty string/i
+    );
+    await assert.rejects(
+      () =>
+        registeredTools
+          .get(orbitTools.ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_MCP_HEALTH)
+          ?.invoke({ input: {} }, { isCancellationRequested: true }) as Promise<unknown>,
+      /cancelled/i
+    );
+  });
+
   test('Should keep safety guards in the tool implementation', () => {
     const source = fs.readFileSync(path.join(repoRoot(), 'src/lm/orbitTools.ts'), 'utf8');
 
@@ -222,5 +369,7 @@ suite('Language Model Tools', () => {
     assert.ok(source.includes('recordToolAudit('));
     assert.ok(source.includes("isPublicNetworkPolicyError(error) ? 'blocked' : 'failure'"));
     assert.ok(source.includes('MAX_TEXT_LENGTH'));
+    assert.ok(!source.includes('truncateText(JSON.stringify'));
+    assert.ok(source.includes('throwIfCancellationRequested(token)'));
   });
 });

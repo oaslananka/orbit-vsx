@@ -2,14 +2,9 @@
 
 ## [Unreleased]
 
-### Security
-
-- Add repository-specific Renovate best-practices policy, strict config validation, GitHub Action digest tracking, vulnerability-alert handling, and weekly manual lockfile maintenance.
-- Add tokenless Semgrep CE scanning in pre-commit and GitHub Actions, document the existing SonarCloud and Snyk GitHub App checks, and provide an optional manual Snyk pre-commit hook.
-- Pin all GitHub Actions to immutable commit SHAs with Renovate-readable version comments.
-
 ### Changed
 
+- Honor Language Model Tool health refresh controls through the shared HealthStore and return deterministic, parseable JSON with explicit omission metadata.
 - Track concurrent VS Code debug sessions through their matching Debug Recorder session IDs and close each mapped session exactly once on termination or extension shutdown.
 - Apply `orbit.debug.maxSessionsShown` after deterministic sorting and restrict the `Recent (7 days)` group to sessions updated within that window.
 - Align Agent Card validation with the A2A 1.0 ProtoJSON model, including security scheme wrappers, canonical security requirements, and `capabilities.extendedAgentCard`.
@@ -17,6 +12,9 @@
 
 ### Security
 
+- Add repository-specific Renovate best-practices policy, strict config validation, GitHub Action digest tracking, vulnerability-alert handling, and weekly manual lockfile maintenance.
+- Add tokenless Semgrep CE scanning in pre-commit and GitHub Actions, document the existing SonarCloud and Snyk GitHub App checks, and provide an optional manual Snyk pre-commit hook.
+- Pin all GitHub Actions to immutable commit SHAs with Renovate-readable version comments.
 - Harden untrusted Agent Card discovery with bounded manual redirects, DNS address policy checks, IP-pinned HTTPS connections, and a streaming 256 KiB response limit.
 - Report blocked discovery policy outcomes without exposing URL credentials or query values in audit output.
 

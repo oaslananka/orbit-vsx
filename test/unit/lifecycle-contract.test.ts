@@ -49,6 +49,9 @@ suite('Extension Lifecycle Contracts', () => {
     assert.ok(source.includes('private pollingGeneration = 0'));
     assert.ok(source.includes('private refreshPromise: Promise<HealthState> | undefined'));
     assert.ok(source.includes('generation !== this.pollingGeneration'));
+    const providerSource = readSource('src/panels/health/HealthProvider.ts');
+    assert.ok(providerSource.includes('async refreshDashboard(): Promise<DashboardData>'));
+    assert.ok(providerSource.includes('return (await this.store.refresh()).dashboard'));
     assert.ok(!source.includes('setInterval('));
   });
 
