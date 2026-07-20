@@ -4,6 +4,7 @@ dist/
 out/
 *.vsix
 coverage/
+.test-results/
 .codex-checkpoints/
 .vscode-test/
 .orbit-test-artifacts/

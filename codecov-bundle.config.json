@@ -1,0 +1,9 @@
+{
+  "bundleName": "orbit-vsx-production",
+  "enableBundleAnalysis": true,
+  "gitService": "github",
+  "oidc": {
+    "useGitHubOIDC": true
+  },
+  "telemetry": false
+}
