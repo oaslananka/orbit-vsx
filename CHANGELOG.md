@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-20
+
 ### Changed
 
 - Add weekly stable and non-blocking Insiders compatibility lanes, a reproducible headless Docker runner, retained extension-host failure logs, and Corepack-only pnpm resolution.
