@@ -46,5 +46,7 @@ export function persistFailureArtifacts(
 }
 
 function sanitizeSegment(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'failure';
+  const normalized = value.replace(/[^a-zA-Z0-9._-]+/g, '-');
+  const withoutLeadingDashes = normalized.replace(/^-+/, '');
+  return withoutLeadingDashes.replace(/-+$/, '') || 'failure';
 }

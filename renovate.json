@@ -103,6 +103,12 @@
         "@typescript-eslint/parser"
       ],
       "groupName": "TypeScript lint toolchain"
+    },
+    {
+      "description": "Let the custom regex manager own the digest-only headless Node image.",
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": ["tools/headless/Dockerfile"],
+      "enabled": false
     }
   ],
   "customManagers": [
@@ -135,6 +141,16 @@
       "depNameTemplate": "snyk",
       "datasourceTemplate": "npm",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Update the version and digest of the non-root headless Node image.",
+      "managerFilePatterns": ["/^tools\\/headless\\/Dockerfile$/"],
+      "matchStrings": [
+        "# renovate: datasource=docker depName=(?<depName>\\S+)\\n# version: (?<currentValue>\\S+)\\nFROM (?<packageName>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
     }
   ]
 }

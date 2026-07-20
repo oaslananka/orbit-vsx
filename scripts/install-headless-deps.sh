@@ -30,7 +30,7 @@ if ! command -v apt-get >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ "$(id -u)" -eq 0 ]; then
+if [[ "$(id -u)" -eq 0 ]]; then
   elevate=()
 elif command -v sudo >/dev/null 2>&1; then
   elevate=(sudo)
@@ -45,7 +45,7 @@ select_package() {
   local candidate version
   for candidate in "$@"; do
     version="$(apt-cache policy "$candidate" 2>/dev/null | awk '/Candidate:/ { print $2; exit }')"
-    if [ -n "$version" ] && [ "$version" != '(none)' ]; then
+    if [[ -n "$version" && "$version" != '(none)' ]]; then
       printf '%s\n' "$candidate"
       return 0
     fi

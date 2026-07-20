@@ -56,6 +56,9 @@ suite('Compatibility Workflow Contracts', () => {
     for (const dependency of ['xvfb', 'libatk1.0-0', 'libgtk-3-0', 'libnss3', 'libgbm1']) {
       assert.ok(installer.includes(dependency), `installer should include ${dependency}`);
     }
+    assert.match(dockerfile, /^FROM node@sha256:[a-f0-9]{64} AS runner$/m);
+    assert.ok(!/^FROM node:[^\s]+@sha256:/m.test(dockerfile));
+    assert.match(dockerfile, /^USER node$/m);
     assert.match(dockerfile, /packageManager/);
     assert.match(dockerfile, /verify:headless/);
     assert.match(read('tools/headless/verify.sh'), /docker info/);

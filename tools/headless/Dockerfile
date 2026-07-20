@@ -1,5 +1,6 @@
 # renovate: datasource=docker depName=node
-FROM node:24.18.0-bookworm-slim@sha256:d45d78e7929b46875bbd4e29bea672d5bc48186c6c3588306521c815e78352d6 AS runner
+# version: 24.18.0-bookworm-slim
+FROM node@sha256:d45d78e7929b46875bbd4e29bea672d5bc48186c6c3588306521c815e78352d6 AS runner
 
 COPY scripts/install-headless-deps.sh /usr/local/bin/install-orbit-headless-deps
 RUN /usr/local/bin/install-orbit-headless-deps
@@ -11,6 +12,8 @@ RUN corepack enable \
   && corepack pnpm install --frozen-lockfile
 
 COPY . .
+RUN chown -R node:node /workspace
+USER node
 RUN node scripts/check-headless-runner.mjs
 
 ARG ORBIT_VSCODE_TEST_VERSION=stable
