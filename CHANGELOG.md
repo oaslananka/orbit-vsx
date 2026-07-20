@@ -9,6 +9,7 @@
 ### Security
 
 - Reject unsafe, malformed, tampered, expired, revoked, incompatible, and untrusted Agent Card signature inputs without logging raw signatures or key material.
+- Pin all vulnerable `brace-expansion` major lines to the first patched releases for GHSA-3jxr-9vmj-r5cp / CVE-2026-13149.
 
 ## [0.6.0] - 2026-07-20
 
