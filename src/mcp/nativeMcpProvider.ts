@@ -6,19 +6,19 @@ import { joinUrl, redactUrl } from '../utils/urlSafety';
 import { isWorkspaceTrusted } from '../utils/workspaceTrust';
 
 type McpServerDefinition = unknown;
-type McpHttpServerDefinitionOptions = {
-  label: string;
-  uri: string;
-  headers?: Record<string, string>;
-  version?: string;
-};
 type McpHttpServerDefinitionConstructor = new (
-  options: McpHttpServerDefinitionOptions
+  label: string,
+  uri: vscode.Uri,
+  headers?: Record<string, string>,
+  version?: string
 ) => McpServerDefinition;
 type McpServerDefinitionProvider = {
   onDidChangeMcpServerDefinitions: vscode.Event<void>;
-  provideMcpServerDefinitions: () => McpServerDefinition[];
-  resolveMcpServerDefinition: (definition: McpServerDefinition) => McpServerDefinition | undefined;
+  provideMcpServerDefinitions: (token?: vscode.CancellationToken) => McpServerDefinition[];
+  resolveMcpServerDefinition: (
+    definition: McpServerDefinition,
+    token?: vscode.CancellationToken
+  ) => McpServerDefinition | undefined;
 };
 type VsCodeMcpRuntime = typeof vscode & {
   lm?: {
@@ -34,7 +34,10 @@ export class OrbitMcpServerDefinitionProvider implements vscode.Disposable {
   private readonly didChangeEmitter = new vscode.EventEmitter<void>();
   private readonly registration: vscode.Disposable | undefined;
 
-  constructor(runtime: VsCodeMcpRuntime = vscode as VsCodeMcpRuntime) {
+  constructor(
+    runtime: VsCodeMcpRuntime = vscode as VsCodeMcpRuntime,
+    private readonly extensionVersion = 'unknown'
+  ) {
     const register = runtime.lm?.registerMcpServerDefinitionProvider;
     if (typeof register !== 'function') return;
 
@@ -76,22 +79,20 @@ export class OrbitMcpServerDefinitionProvider implements vscode.Disposable {
     if (config.health.enabled) {
       definitions.push(
         new httpDefinition(
-          httpDefinitionOptions(
-            'Orbit Health Monitor MCP',
-            joinUrl(config.health.endpoint, '/mcp'),
-            config.health.token
-          )
+          'Orbit Health Monitor MCP',
+          runtime.Uri.parse(joinUrl(config.health.endpoint, '/mcp')),
+          bearerHeaders(config.health.token),
+          this.extensionVersion
         )
       );
     }
     if (config.debug.enabled) {
       definitions.push(
         new httpDefinition(
-          httpDefinitionOptions(
-            'Orbit Debug Recorder MCP',
-            joinUrl(config.debug.endpoint, '/mcp'),
-            config.debug.token
-          )
+          'Orbit Debug Recorder MCP',
+          runtime.Uri.parse(joinUrl(config.debug.endpoint, '/mcp')),
+          bearerHeaders(config.debug.token),
+          this.extensionVersion
         )
       );
     }
@@ -110,20 +111,19 @@ export class OrbitMcpServerDefinitionProvider implements vscode.Disposable {
 export function registerNativeMcpProvider(
   context: vscode.ExtensionContext
 ): OrbitMcpServerDefinitionProvider {
-  const provider = new OrbitMcpServerDefinitionProvider();
+  const provider = new OrbitMcpServerDefinitionProvider(
+    vscode as VsCodeMcpRuntime,
+    extensionVersionFromContext(context)
+  );
   context.subscriptions.push(provider);
   return provider;
 }
 
-function httpDefinitionOptions(
-  label: string,
-  uri: string,
-  token: string
-): McpHttpServerDefinitionOptions {
-  const headers = bearerHeaders(token);
-  const options: McpHttpServerDefinitionOptions = { label, uri, version: '0.5.7' };
-  if (headers) options.headers = headers;
-  return options;
+function extensionVersionFromContext(context: vscode.ExtensionContext): string {
+  const packageJson = context.extension.packageJSON as { version?: unknown };
+  return typeof packageJson.version === 'string' && packageJson.version.trim().length > 0
+    ? packageJson.version
+    : 'unknown';
 }
 
 function bearerHeaders(token: string): Record<string, string> | undefined {
