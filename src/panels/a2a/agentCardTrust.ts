@@ -20,7 +20,7 @@ const JWKS_MAX_JSON_BYTES = 128 * 1024;
 const MAX_JWKS_KEYS = 100;
 const MAX_KEY_ID_LENGTH = 256;
 const SECURITY_HEADER_FIELDS = ['alg', 'kid', 'jku'] as const;
-const SUPPORTED_ALGORITHMS = new Set(['ES256', 'RS256']);
+const SUPPORTED_ALGORITHMS = new Set<SupportedAlgorithm>(['ES256', 'RS256']);
 const UNSAFE_ALGORITHM_PATTERN = /^(?:none|HS\d+)$/i;
 const OMIT_VALUE = Symbol('omit-agent-card-default');
 
@@ -67,6 +67,39 @@ interface CachedJwks {
 interface SignatureOutcome extends AgentCardTrustResult {
   signatureIndex: number;
 }
+
+type SupportedAlgorithm = 'ES256' | 'RS256';
+type JsonPrimitive = null | boolean | number | string;
+type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+type PreparedAgentCardValue = JsonValue | typeof OMIT_VALUE;
+
+interface PreparedSignatureContext {
+  algorithm: SupportedAlgorithm;
+  keyId: string;
+  protectedHeader: ProtectedJwsHeader;
+  signature: AgentCardSignature;
+  signatureBytes: Buffer;
+  signatureCount: number;
+  signatureIndex: number;
+  signingInput: string;
+}
+
+interface ResolvedSignatureContext extends PreparedSignatureContext {
+  keyUrl: string;
+  redactedKeyUrl: string;
+}
+
+type SignaturePreparationResult =
+  | { ok: true; context: PreparedSignatureContext }
+  | { ok: false; outcome: SignatureOutcome };
+
+type SignatureResolutionResult =
+  | { ok: true; context: ResolvedSignatureContext }
+  | { ok: false; outcome: SignatureOutcome };
+
+type MatchingKeysResult =
+  | { ok: true; keys: PublicJwk[] }
+  | { ok: false; outcome: SignatureOutcome };
 
 export class AgentCardTrustVerifier {
   private readonly cache = new Map<string, CachedJwks>();
@@ -148,9 +181,32 @@ export class AgentCardTrustVerifier {
     signatureCount: number,
     context: VerifyContext
   ): Promise<SignatureOutcome> {
+    const preparation = this.prepareSignature(
+      signatureValue,
+      canonicalPayload,
+      signatureIndex,
+      signatureCount
+    );
+    if (!preparation.ok) return preparation.outcome;
+
+    const resolution = this.resolveSignatureKey(preparation.context, context.sourceUrl);
+    if (!resolution.ok) return resolution.outcome;
+
+    const matchingKeys = await this.loadMatchingKeys(resolution.context);
+    if (!matchingKeys.ok) return matchingKeys.outcome;
+
+    return this.verifyMatchingKeys(resolution.context, matchingKeys.keys);
+  }
+
+  private prepareSignature(
+    signatureValue: unknown,
+    canonicalPayload: string,
+    signatureIndex: number,
+    signatureCount: number
+  ): SignaturePreparationResult {
     const signature = parseSignature(signatureValue);
     if (!signature) {
-      return signatureOutcome(
+      return rejectedPreparation(
         'invalid',
         'malformed_signature',
         signatureIndex,
@@ -161,7 +217,7 @@ export class AgentCardTrustVerifier {
 
     const protectedHeader = parseProtectedHeader(signature.protected);
     if (!protectedHeader) {
-      return signatureOutcome(
+      return rejectedPreparation(
         'invalid',
         'malformed_protected_header',
         signatureIndex,
@@ -172,7 +228,7 @@ export class AgentCardTrustVerifier {
 
     const headerConflict = findUnprotectedHeaderConflict(signature);
     if (headerConflict) {
-      return signatureOutcome(
+      return rejectedPreparation(
         'invalid',
         'header_conflict',
         signatureIndex,
@@ -181,18 +237,18 @@ export class AgentCardTrustVerifier {
       );
     }
 
-    const { alg, kid } = protectedHeader;
-    if (!alg || !kid || protectedHeader.typ === undefined || kid.length > MAX_KEY_ID_LENGTH) {
-      return signatureOutcome(
+    const { alg, kid, typ } = protectedHeader;
+    if (!alg || !kid || typ === undefined || kid.length > MAX_KEY_ID_LENGTH) {
+      return rejectedPreparation(
         'invalid',
         'missing_protected_header',
         signatureIndex,
         signatureCount,
-        'Agent Card signature must protect a bounded alg and kid.'
+        'Agent Card signature must protect a bounded alg, typ, and kid.'
       );
     }
     if (UNSAFE_ALGORITHM_PATTERN.test(alg)) {
-      return signatureOutcome(
+      return rejectedPreparation(
         'invalid',
         'unsafe_algorithm',
         signatureIndex,
@@ -201,8 +257,8 @@ export class AgentCardTrustVerifier {
         { algorithm: alg, keyId: kid }
       );
     }
-    if (!SUPPORTED_ALGORITHMS.has(alg)) {
-      return signatureOutcome(
+    if (!isSupportedAlgorithm(alg)) {
+      return rejectedPreparation(
         'unverified',
         'unsupported_algorithm',
         signatureIndex,
@@ -211,167 +267,158 @@ export class AgentCardTrustVerifier {
         { algorithm: alg, keyId: kid }
       );
     }
-    if (protectedHeader.b64 === false) {
-      return signatureOutcome(
+    if (protectedHeader.b64 === false || protectedHeader.crit !== undefined) {
+      return rejectedPreparation(
         'unverified',
         'unsupported_critical_header',
         signatureIndex,
         signatureCount,
-        'Unencoded JWS payloads are not supported.',
+        'JWS critical headers and unencoded payloads are not supported.',
         { algorithm: alg, keyId: kid }
       );
     }
-    if (protectedHeader.crit !== undefined) {
-      return signatureOutcome(
-        'unverified',
-        'unsupported_critical_header',
-        signatureIndex,
-        signatureCount,
-        'JWS critical headers are not supported.',
-        { algorithm: alg, keyId: kid }
-      );
-    }
-    if (protectedHeader.typ.toUpperCase() !== 'JOSE') {
-      return signatureOutcome(
+    if (typ.toUpperCase() !== 'JOSE') {
+      return rejectedPreparation(
         'invalid',
         'invalid_typ',
         signatureIndex,
         signatureCount,
-        'Agent Card signature typ must be JOSE when present.',
+        'Agent Card signature typ must be JOSE.',
         { algorithm: alg, keyId: kid }
       );
     }
 
-    if (!protectedHeader.jku) {
-      return signatureOutcome(
-        'key-unavailable',
-        'missing_key_url',
+    const signatureBytes = decodeBase64Url(signature.signature);
+    if (!signatureBytes) {
+      return rejectedPreparation(
+        'invalid',
+        'malformed_signature',
         signatureIndex,
         signatureCount,
-        'No trusted key URL is available for this signature.',
+        'Agent Card signature bytes are malformed.',
         { algorithm: alg, keyId: kid }
+      );
+    }
+
+    const payloadValue = Buffer.from(canonicalPayload, 'utf8').toString('base64url');
+    return {
+      ok: true,
+      context: {
+        algorithm: alg,
+        keyId: kid,
+        protectedHeader,
+        signature,
+        signatureBytes,
+        signatureCount,
+        signatureIndex,
+        signingInput: `${signature.protected}.${payloadValue}`,
+      },
+    };
+  }
+
+  private resolveSignatureKey(
+    context: PreparedSignatureContext,
+    sourceUrl?: string
+  ): SignatureResolutionResult {
+    const keyUrlValue = context.protectedHeader.jku;
+    if (!keyUrlValue) {
+      return rejectedResolution(
+        context,
+        'missing_key_url',
+        'No trusted key URL is available for this signature.'
       );
     }
 
     let keyUrl: string;
     try {
-      keyUrl = normalizeJwksUrl(protectedHeader.jku);
+      keyUrl = normalizeJwksUrl(keyUrlValue);
     } catch {
-      return signatureOutcome(
-        'key-unavailable',
+      return rejectedResolution(
+        context,
         'invalid_key_url',
-        signatureIndex,
-        signatureCount,
-        'The protected JWKS URL is not a valid public HTTPS URL.',
-        { algorithm: alg, keyId: kid }
+        'The protected JWKS URL is not a valid public HTTPS URL.'
       );
     }
 
-    if (!this.isTrustedKeyUrl(keyUrl, context.sourceUrl)) {
-      return signatureOutcome(
-        'key-unavailable',
+    const resolved = { ...context, keyUrl, redactedKeyUrl: redactUrl(keyUrl) };
+    if (!this.isTrustedKeyUrl(keyUrl, sourceUrl)) {
+      return rejectedResolvedContext(
+        resolved,
         'untrusted_key_url',
-        signatureIndex,
-        signatureCount,
-        'The protected JWKS URL is outside the configured trust policy.',
-        { algorithm: alg, keyId: kid, keyUrl: redactUrl(keyUrl) }
+        'The protected JWKS URL is outside the configured trust policy.'
       );
     }
+    return { ok: true, context: resolved };
+  }
 
+  private async loadMatchingKeys(context: ResolvedSignatureContext): Promise<MatchingKeysResult> {
     let keys: PublicJwk[];
     try {
-      keys = await this.getJwks(keyUrl);
+      keys = await this.getJwks(context.keyUrl);
     } catch {
-      return signatureOutcome(
-        'key-unavailable',
+      return rejectedMatchingKeys(
+        context,
         'key_fetch_failed',
-        signatureIndex,
-        signatureCount,
-        'The trusted JWKS could not be retrieved or parsed.',
-        { algorithm: alg, keyId: kid, keyUrl: redactUrl(keyUrl) }
+        'The trusted JWKS could not be retrieved or parsed.'
       );
     }
 
-    const matchingKeys = keys.filter((key) => key.kid === kid);
+    const matchingKeys = keys.filter((key) => key.kid === context.keyId);
     if (matchingKeys.length === 0) {
-      return signatureOutcome(
-        'key-unavailable',
+      return rejectedMatchingKeys(
+        context,
         'key_not_found',
-        signatureIndex,
-        signatureCount,
-        'No matching verification key was found.',
-        { algorithm: alg, keyId: kid, keyUrl: redactUrl(keyUrl) }
+        'No matching verification key was found.'
       );
     }
+    return { ok: true, keys: matchingKeys };
+  }
 
+  private verifyMatchingKeys(
+    context: ResolvedSignatureContext,
+    matchingKeys: PublicJwk[]
+  ): SignatureOutcome {
     const nowSeconds = Math.floor(this.now() / 1000);
     let lastUnavailableReason: AgentCardTrustReason | undefined;
     let attemptedVerification = false;
+
     for (const key of matchingKeys) {
-      const availability = getKeyAvailability(key, alg, nowSeconds);
+      const availability = getKeyAvailability(key, context.algorithm, nowSeconds);
       if (availability) {
         lastUnavailableReason = availability;
         continue;
       }
-      let publicKey: KeyObject;
-      try {
-        publicKey = createPublicKey({ key: key as CryptoJsonWebKey, format: 'jwk' });
-      } catch {
+
+      const publicKey = importPublicKey(key);
+      if (!publicKey) {
         lastUnavailableReason = 'key_import_failed';
         continue;
       }
 
-      const signingInput = `${signature.protected}.${Buffer.from(canonicalPayload, 'utf8').toString(
-        'base64url'
-      )}`;
-      const signatureBytes = decodeBase64Url(signature.signature);
-      if (!signatureBytes) {
-        return signatureOutcome(
-          'invalid',
-          'malformed_signature',
-          signatureIndex,
-          signatureCount,
-          'Agent Card signature bytes are malformed.',
-          { algorithm: alg, keyId: kid, keyUrl: redactUrl(keyUrl) }
+      attemptedVerification = true;
+      if (isSignatureValid(context, publicKey)) {
+        return outcomeForResolvedContext(
+          context,
+          'verified',
+          'verified',
+          'Agent Card signature is cryptographically verified.'
         );
-      }
-
-      try {
-        attemptedVerification = true;
-        const valid = verifyWithAlgorithm(alg, publicKey, signingInput, signatureBytes);
-        if (valid) {
-          return signatureOutcome(
-            'verified',
-            'verified',
-            signatureIndex,
-            signatureCount,
-            'Agent Card signature is cryptographically verified.',
-            { algorithm: alg, keyId: kid, keyUrl: redactUrl(keyUrl) }
-          );
-        }
-      } catch {
-        // Treat a verifier/key mismatch as an invalid signature without exposing key material.
       }
     }
 
     if (!attemptedVerification && lastUnavailableReason) {
-      return signatureOutcome(
+      return outcomeForResolvedContext(
+        context,
         'key-unavailable',
         lastUnavailableReason,
-        signatureIndex,
-        signatureCount,
-        keyAvailabilitySummary(lastUnavailableReason),
-        { algorithm: alg, keyId: kid, keyUrl: redactUrl(keyUrl) }
+        keyAvailabilitySummary(lastUnavailableReason)
       );
     }
-
-    return signatureOutcome(
+    return outcomeForResolvedContext(
+      context,
       'invalid',
       'invalid_signature',
-      signatureIndex,
-      signatureCount,
-      'Agent Card signature does not match the canonical payload.',
-      { algorithm: alg, keyId: kid, keyUrl: redactUrl(keyUrl) }
+      'Agent Card signature does not match the canonical payload.'
     );
   }
 
@@ -405,55 +452,102 @@ export function canonicalizeAgentCardPayload(payload: unknown): string {
 }
 
 export function canonicalizeJson(value: unknown): string {
+  return canonicalizeJsonValue(asCanonicalJsonValue(value));
+}
+
+function canonicalizeJsonValue(value: JsonValue): string {
   if (value === null) return 'null';
   if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return JSON.stringify(value);
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalizeJsonValue(item)).join(',')}]`;
+  }
+
+  const keys = sortUtf16Keys(Object.keys(value));
+  const properties = keys.map(
+    (key) => `${JSON.stringify(key)}:${canonicalizeJsonValue(value[key] as JsonValue)}`
+  );
+  return `{${properties.join(',')}}`;
+}
+
+function asCanonicalJsonValue(value: unknown): JsonValue {
+  if (value === null || typeof value === 'boolean') return value;
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) throw new Error('JCS requires finite JSON numbers.');
-    return JSON.stringify(value);
+    return value;
   }
   if (typeof value === 'string') {
     assertWellFormedUnicode(value);
-    return JSON.stringify(value);
+    return value;
   }
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => canonicalizeJson(item)).join(',')}]`;
+  if (Array.isArray(value)) return value.map((item) => asCanonicalJsonValue(item));
+
+  const record = asJsonRecord(value);
+  if (!record) throw new Error(`Unsupported JCS value type: ${typeof value}`);
+  const output: { [key: string]: JsonValue } = {};
+  for (const [key, child] of Object.entries(record)) {
+    assertWellFormedUnicode(key);
+    output[key] = asCanonicalJsonValue(child);
   }
-  if (typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .sort()
-      .map((key) => {
-        assertWellFormedUnicode(key);
-        return `${JSON.stringify(key)}:${canonicalizeJson(record[key])}`;
-      })
-      .join(',')}}`;
-  }
-  throw new Error(`Unsupported JCS value type: ${typeof value}`);
+  return output;
 }
 
-function prepareAgentCardValue(
-  value: unknown,
+function sortUtf16Keys(keys: string[]): string[] {
+  const sorted: string[] = [];
+  for (const key of keys) {
+    let position = sorted.length;
+    while (position > 0 && compareUtf16(key, sorted[position - 1] as string) < 0) position -= 1;
+    sorted.splice(position, 0, key);
+  }
+  return sorted;
+}
+
+function compareUtf16(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
+function prepareAgentCardValue(value: unknown, path: string, root = false): PreparedAgentCardValue {
+  if (isJsonPrimitive(value)) return value;
+  if (Array.isArray(value)) return prepareAgentCardArray(value, path);
+
+  const record = asJsonRecord(value);
+  if (!record) throw new Error(`Unsupported Agent Card value type: ${typeof value}`);
+  return prepareAgentCardObject(record, path, root);
+}
+
+function prepareAgentCardArray(value: unknown[], path: string): JsonValue[] | typeof OMIT_VALUE {
+  if (value.length === 0 && !isRequiredCollectionPath(path)) return OMIT_VALUE;
+  return value.map((item, index) => {
+    const prepared = prepareAgentCardValue(item, `${path}[${index}]`);
+    return prepared === OMIT_VALUE ? null : prepared;
+  });
+}
+
+function prepareAgentCardObject(
+  value: Record<string, unknown>,
   path: string,
-  root = false
-): unknown | typeof OMIT_VALUE {
-  if (Array.isArray(value)) {
-    if (value.length === 0 && !isRequiredCollectionPath(path)) return OMIT_VALUE;
-    return value.map((item, index) => {
-      const prepared = prepareAgentCardValue(item, `${path}[${index}]`);
-      return prepared === OMIT_VALUE ? null : prepared;
-    });
+  root: boolean
+): { [key: string]: JsonValue } {
+  const output: { [key: string]: JsonValue } = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (root && key === 'signatures') continue;
+    if (child === undefined) continue;
+    const prepared = prepareAgentCardValue(child, `${path}.${key}`);
+    if (prepared !== OMIT_VALUE) output[key] = prepared;
   }
-  if (typeof value === 'object' && value !== null) {
-    const output: Record<string, unknown> = {};
-    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-      if (root && key === 'signatures') continue;
-      if (child === undefined) continue;
-      const prepared = prepareAgentCardValue(child, `${path}.${key}`);
-      if (prepared !== OMIT_VALUE) output[key] = prepared;
-    }
-    return output;
-  }
-  return value;
+  return output;
+}
+
+function isJsonPrimitive(value: unknown): value is JsonPrimitive {
+  return (
+    value === null ||
+    typeof value === 'boolean' ||
+    typeof value === 'number' ||
+    typeof value === 'string'
+  );
 }
 
 function isRequiredCollectionPath(path: string): boolean {
@@ -469,16 +563,12 @@ function isRequiredCollectionPath(path: string): boolean {
 
 function assertWellFormedUnicode(value: string): void {
   for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
-    if (code >= 0xd800 && code <= 0xdbff) {
-      const next = value.charCodeAt(index + 1);
-      if (!(next >= 0xdc00 && next <= 0xdfff)) {
-        throw new Error('JCS input contains an unpaired Unicode surrogate.');
-      }
-      index += 1;
-    } else if (code >= 0xdc00 && code <= 0xdfff) {
+    const codePoint = value.codePointAt(index);
+    if (codePoint === undefined) break;
+    if (codePoint >= 0xd800 && codePoint <= 0xdfff) {
       throw new Error('JCS input contains an unpaired Unicode surrogate.');
     }
+    if (codePoint > 0xffff) index += 1;
   }
 }
 
@@ -527,53 +617,82 @@ function findUnprotectedHeaderConflict(signature: AgentCardSignature): string | 
 }
 
 function hasDuplicateTopLevelJsonKeys(text: string): boolean {
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  let stringStart = -1;
-  let keyCandidate = false;
-  let expectingKey = false;
-  const keys = new Set<string>();
+  return new TopLevelJsonKeyScanner(text).hasDuplicateKey();
+}
 
-  for (let index = 0; index < text.length; index += 1) {
-    const character = text[index];
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (character === '\\') {
-        escaped = true;
-      } else if (character === '"') {
-        inString = false;
-        if (keyCandidate) {
-          let key: string;
-          try {
-            key = JSON.parse(text.slice(stringStart, index + 1)) as string;
-          } catch {
-            return true;
-          }
-          if (keys.has(key)) return true;
-          keys.add(key);
-          expectingKey = false;
-          keyCandidate = false;
-        }
+class TopLevelJsonKeyScanner {
+  private depth = 0;
+  private escaped = false;
+  private expectingKey = false;
+  private inString = false;
+  private keyCandidate = false;
+  private readonly keys = new Set<string>();
+  private stringStart = -1;
+
+  constructor(private readonly text: string) {}
+
+  hasDuplicateKey(): boolean {
+    for (let index = 0; index < this.text.length; index += 1) {
+      const character = this.text[index] as string;
+      if (this.inString) {
+        if (this.consumeStringCharacter(character, index)) return true;
+      } else {
+        this.consumeStructuralCharacter(character, index);
       }
-      continue;
     }
+    return false;
+  }
 
-    if (character === '"') {
-      inString = true;
-      stringStart = index;
-      keyCandidate = depth === 1 && expectingKey;
-    } else if (character === '{' || character === '[') {
-      depth += 1;
-      if (depth === 1 && character === '{') expectingKey = true;
-    } else if (character === '}' || character === ']') {
-      depth -= 1;
-    } else if (character === ',' && depth === 1) {
-      expectingKey = true;
+  private consumeStringCharacter(character: string, index: number): boolean {
+    if (this.escaped) {
+      this.escaped = false;
+      return false;
+    }
+    if (character === '\\') {
+      this.escaped = true;
+      return false;
+    }
+    if (character !== '"') return false;
+
+    this.inString = false;
+    return this.keyCandidate ? this.finishKey(index) : false;
+  }
+
+  private finishKey(index: number): boolean {
+    const key = this.decodeCurrentString(index);
+    if (key === undefined || this.keys.has(key)) return true;
+    this.keys.add(key);
+    this.expectingKey = false;
+    this.keyCandidate = false;
+    return false;
+  }
+
+  private decodeCurrentString(index: number): string | undefined {
+    try {
+      return JSON.parse(this.text.slice(this.stringStart, index + 1)) as string;
+    } catch {
+      return undefined;
     }
   }
-  return false;
+
+  private consumeStructuralCharacter(character: string, index: number): void {
+    if (character === '"') {
+      this.inString = true;
+      this.stringStart = index;
+      this.keyCandidate = this.depth === 1 && this.expectingKey;
+      return;
+    }
+    if (character === '{' || character === '[') {
+      this.depth += 1;
+      if (this.depth === 1 && character === '{') this.expectingKey = true;
+      return;
+    }
+    if (character === '}' || character === ']') {
+      this.depth -= 1;
+      return;
+    }
+    if (character === ',' && this.depth === 1) this.expectingKey = true;
+  }
 }
 
 function decodeBase64Url(value: string): Buffer | undefined {
@@ -611,33 +730,150 @@ function parseJwks(value: unknown): PublicJwk[] {
 
 function getKeyAvailability(
   key: PublicJwk,
-  algorithm: string,
+  algorithm: SupportedAlgorithm,
   nowSeconds: number
 ): AgentCardTrustReason | undefined {
-  if (containsPrivateOrSymmetricKeyMaterial(key)) return 'key_import_failed';
+  return (
+    getKeyMaterialReason(key) ??
+    getKeyLifecycleReason(key, nowSeconds) ??
+    getKeyUsageReason(key) ??
+    getKeyAlgorithmReason(key, algorithm)
+  );
+}
+
+function getKeyMaterialReason(key: PublicJwk): AgentCardTrustReason | undefined {
+  return containsPrivateOrSymmetricKeyMaterial(key) ? 'key_import_failed' : undefined;
+}
+
+function getKeyLifecycleReason(
+  key: PublicJwk,
+  nowSeconds: number
+): AgentCardTrustReason | undefined {
   if (key.revoked === true || key.active === false || key.status?.toLowerCase() === 'revoked') {
     return 'key_revoked';
   }
   if (typeof key.exp === 'number' && key.exp <= nowSeconds) return 'key_expired';
   if (typeof key.nbf === 'number' && key.nbf > nowSeconds) return 'key_not_yet_valid';
-  if (key.alg !== undefined && key.alg !== algorithm) return 'key_algorithm_mismatch';
-  if (key.use !== undefined && key.use !== 'sig') return 'key_usage_mismatch';
-  if (key.key_ops !== undefined) {
-    if (!Array.isArray(key.key_ops) || !key.key_ops.includes('verify')) return 'key_usage_mismatch';
-  }
-  if (algorithm === 'ES256' && (key.kty !== 'EC' || key.crv !== 'P-256')) {
-    return 'key_algorithm_mismatch';
-  }
-  if (algorithm === 'RS256' && key.kty !== 'RSA') return 'key_algorithm_mismatch';
   return undefined;
+}
+
+function getKeyUsageReason(key: PublicJwk): AgentCardTrustReason | undefined {
+  if (key.use !== undefined && key.use !== 'sig') return 'key_usage_mismatch';
+  if (key.key_ops === undefined) return undefined;
+  return Array.isArray(key.key_ops) && key.key_ops.includes('verify')
+    ? undefined
+    : 'key_usage_mismatch';
+}
+
+function getKeyAlgorithmReason(
+  key: PublicJwk,
+  algorithm: SupportedAlgorithm
+): AgentCardTrustReason | undefined {
+  if (key.alg !== undefined && key.alg !== algorithm) return 'key_algorithm_mismatch';
+  if (algorithm === 'ES256') {
+    return key.kty === 'EC' && key.crv === 'P-256' ? undefined : 'key_algorithm_mismatch';
+  }
+  return key.kty === 'RSA' ? undefined : 'key_algorithm_mismatch';
 }
 
 function containsPrivateOrSymmetricKeyMaterial(key: PublicJwk): boolean {
   return ['d', 'p', 'q', 'dp', 'dq', 'qi', 'oth', 'k'].some((field) => key[field] !== undefined);
 }
 
+function isSupportedAlgorithm(value: string): value is SupportedAlgorithm {
+  return SUPPORTED_ALGORITHMS.has(value as SupportedAlgorithm);
+}
+
+function importPublicKey(key: PublicJwk): KeyObject | undefined {
+  try {
+    return createPublicKey({ key: key as CryptoJsonWebKey, format: 'jwk' });
+  } catch {
+    return undefined;
+  }
+}
+
+function isSignatureValid(context: ResolvedSignatureContext, key: KeyObject): boolean {
+  try {
+    return verifyWithAlgorithm(
+      context.algorithm,
+      key,
+      context.signingInput,
+      context.signatureBytes
+    );
+  } catch {
+    return false;
+  }
+}
+
+function rejectedPreparation(
+  state: AgentCardTrustState,
+  reason: AgentCardTrustReason,
+  signatureIndex: number,
+  signatureCount: number,
+  summary: string,
+  metadata: Pick<AgentCardTrustResult, 'algorithm' | 'keyId' | 'keyUrl'> = {}
+): SignaturePreparationResult {
+  return {
+    ok: false,
+    outcome: signatureOutcome(state, reason, signatureIndex, signatureCount, summary, metadata),
+  };
+}
+
+function rejectedResolution(
+  context: PreparedSignatureContext,
+  reason: AgentCardTrustReason,
+  summary: string
+): SignatureResolutionResult {
+  return {
+    ok: false,
+    outcome: signatureOutcome(
+      'key-unavailable',
+      reason,
+      context.signatureIndex,
+      context.signatureCount,
+      summary,
+      { algorithm: context.algorithm, keyId: context.keyId }
+    ),
+  };
+}
+
+function rejectedResolvedContext(
+  context: ResolvedSignatureContext,
+  reason: AgentCardTrustReason,
+  summary: string
+): SignatureResolutionResult {
+  return {
+    ok: false,
+    outcome: outcomeForResolvedContext(context, 'key-unavailable', reason, summary),
+  };
+}
+
+function rejectedMatchingKeys(
+  context: ResolvedSignatureContext,
+  reason: AgentCardTrustReason,
+  summary: string
+): MatchingKeysResult {
+  return {
+    ok: false,
+    outcome: outcomeForResolvedContext(context, 'key-unavailable', reason, summary),
+  };
+}
+
+function outcomeForResolvedContext(
+  context: ResolvedSignatureContext,
+  state: AgentCardTrustState,
+  reason: AgentCardTrustReason,
+  summary: string
+): SignatureOutcome {
+  return signatureOutcome(state, reason, context.signatureIndex, context.signatureCount, summary, {
+    algorithm: context.algorithm,
+    keyId: context.keyId,
+    keyUrl: context.redactedKeyUrl,
+  });
+}
+
 function verifyWithAlgorithm(
-  algorithm: string,
+  algorithm: SupportedAlgorithm,
   key: KeyObject,
   signingInput: string,
   signature: Buffer

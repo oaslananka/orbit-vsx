@@ -97,6 +97,7 @@ function App(): React.ReactElement {
 
   const { card, trust, validation } = inspection;
   const trustTone = trustToneFor(trust.state);
+  const schemaDetail = getSchemaDetail(validation);
 
   return (
     <main style={styles.container}>
@@ -124,11 +125,7 @@ function App(): React.ReactElement {
         <div style={styles.statusCard}>
           <span style={styles.statusLabel}>Schema</span>
           <strong>{validation.valid ? 'Valid' : 'Invalid'}</strong>
-          <span style={styles.statusDetail}>
-            {validation.valid
-              ? 'A2A structure passed validation.'
-              : `${validation.errors.length} schema issue${validation.errors.length === 1 ? '' : 's'}`}
-          </span>
+          <span style={styles.statusDetail}>{schemaDetail}</span>
         </div>
         <div style={{ ...styles.statusCard, borderLeftColor: trustTone }}>
           <span style={styles.statusLabel}>Signature trust</span>
@@ -204,13 +201,24 @@ function App(): React.ReactElement {
   );
 }
 
-function Definition({ label, value }: { label: string; value: string }): React.ReactElement {
+interface DefinitionProps {
+  readonly label: string;
+  readonly value: string;
+}
+
+function Definition({ label, value }: DefinitionProps): React.ReactElement {
   return (
     <div style={styles.definitionItem}>
       <dt style={styles.statusLabel}>{label}</dt>
       <dd style={styles.definitionValue}>{value}</dd>
     </div>
   );
+}
+
+function getSchemaDetail(validation: ValidationResult): string {
+  if (validation.valid) return 'A2A structure passed validation.';
+  const suffix = validation.errors.length === 1 ? '' : 's';
+  return `${validation.errors.length} schema issue${suffix}`;
 }
 
 function trustLabel(state: TrustState): string {

@@ -141,6 +141,13 @@ suite('Agent Card Trust Verification', () => {
     assert.throws(() => canonicalizeJson(Number.POSITIVE_INFINITY), /finite|JSON number/i);
   });
 
+  test('Should sort canonical object keys by UTF-16 code units rather than locale collation', () => {
+    assert.strictEqual(
+      canonicalizeJson({ z: 1, ä: 2, a: 3, '😀': 4 }),
+      '{"a":3,"z":1,"ä":2,"😀":4}'
+    );
+  });
+
   test('Should exclude signatures and optional empty collections from the signing payload', () => {
     const payload = {
       ...unsignedAgentCard(),

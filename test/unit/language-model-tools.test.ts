@@ -386,7 +386,8 @@ suite('Language Model Tools', () => {
 
     assert.ok(source.includes('assertWorkspaceTrusted();'));
     assert.ok(source.includes('recordToolAudit('));
-    assert.ok(source.includes("isPublicNetworkPolicyError(error) ? 'blocked' : 'failure'"));
+    assert.ok(source.includes('const policyError = isPublicNetworkPolicyError(error)'));
+    assert.ok(source.includes("policyError ? 'blocked' : 'failure'"));
     assert.ok(source.includes('MAX_TEXT_LENGTH'));
     assert.ok(!source.includes('truncateText(JSON.stringify'));
     assert.ok(source.includes('throwIfCancellationRequested(token)'));

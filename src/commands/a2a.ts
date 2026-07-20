@@ -2,9 +2,10 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import type { A2AProvider } from '../panels/a2a/A2AProvider';
+import type { AgentCardTrustResult } from '../panels/a2a/types';
 import { COMMAND_IDS } from '../constants';
 import { requireWorkspaceTrust } from '../utils/workspaceTrust';
-import { recordAuditEvent } from '../utils/audit';
+import { recordAuditEvent, type AuditOutcome } from '../utils/audit';
 import { isPublicNetworkPolicyError } from '../utils/publicJsonFetch';
 
 function getWorkspaceFolderForUri(uri: vscode.Uri): vscode.WorkspaceFolder | undefined {
@@ -24,6 +25,14 @@ async function pickScaffoldFolder(): Promise<vscode.WorkspaceFolder | undefined>
     { placeHolder: 'Select workspace folder for the new A2A agent' }
   );
   return picked?.folder;
+}
+
+function getTrustAuditOutcome(trust: AgentCardTrustResult): AuditOutcome {
+  if (trust.state === 'verified' || trust.state === 'unsigned') return 'success';
+  if (trust.reason === 'untrusted_key_url' || trust.reason === 'unsafe_algorithm') {
+    return 'blocked';
+  }
+  return 'failure';
 }
 
 export function registerA2ACommands(
@@ -128,13 +137,7 @@ export function registerA2ACommands(
         recordAuditEvent({
           surface: 'a2a',
           operation: 'verify_agent_card_signature',
-          outcome:
-            inspection.trust.state === 'verified' || inspection.trust.state === 'unsigned'
-              ? 'success'
-              : inspection.trust.reason === 'untrusted_key_url' ||
-                  inspection.trust.reason === 'unsafe_algorithm'
-                ? 'blocked'
-                : 'failure',
+          outcome: getTrustAuditOutcome(inspection.trust),
           target: { kind: 'url', value: url },
           detail: `trust:${inspection.trust.state}`,
         });

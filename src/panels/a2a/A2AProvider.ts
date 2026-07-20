@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { readConfig } from '../../config';
 import { COMMAND_IDS, VIEW_ITEM_CONTEXT } from '../../constants';
-import { recordAuditEvent } from '../../utils/audit';
+import { recordAuditEvent, type AuditOutcome } from '../../utils/audit';
 import { Logger } from '../../utils/logger';
 import { createTreeEmptyState } from '../../utils/treeEmptyState';
 import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../../utils/workspaceTrust';
@@ -66,8 +66,10 @@ class A2ALocalCardItem extends vscode.TreeItem {
       : new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
     this.description = `${localCard.validation.valid ? 'valid' : 'invalid'} · ${localCard.trust.state}`;
     const errors = localCard.validation.errors.slice(0, 8).join('\n');
+    const errorDetails = errors.length > 0 ? `\n\nErrors:\n${errors}` : '';
+    const schemaState = localCard.validation.valid ? 'valid' : 'invalid';
     this.tooltip = new vscode.MarkdownString(
-      `**Local Agent Card**\n\n\`${localCard.filePath}\`\n\nSchema: ${localCard.validation.valid ? 'valid' : 'invalid'}\n\nSignature trust: **${localCard.trust.state}**\n\n${localCard.trust.summary}${errors ? `\n\nErrors:\n${errors}` : ''}`
+      `**Local Agent Card**\n\n\`${localCard.filePath}\`\n\nSchema: ${schemaState}\n\nSignature trust: **${localCard.trust.state}**\n\n${localCard.trust.summary}${errorDetails}`
     );
     this.contextValue = 'a2aLocalCard';
   }
@@ -252,12 +254,11 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
           invalidCount > 0 || unsafeCount > 0
             ? new vscode.ThemeIcon('warning')
             : new vscode.ThemeIcon('folder');
-        localItem.description =
-          invalidCount > 0
-            ? `${invalidCount} invalid`
-            : unsafeCount > 0
-              ? `${unsafeCount} trust warning`
-              : `${this.localCards.length} checked`;
+        localItem.description = getLocalCardsDescription(
+          this.localCards.length,
+          invalidCount,
+          unsafeCount
+        );
         items.push(localItem);
       }
       if (items.length === 0) {
@@ -373,6 +374,24 @@ export class A2AProvider implements vscode.TreeDataProvider<vscode.TreeItem>, vs
   }
 }
 
+function getLocalCardsDescription(
+  total: number,
+  invalidCount: number,
+  unsafeCount: number
+): string {
+  if (invalidCount > 0) return `${invalidCount} invalid`;
+  if (unsafeCount > 0) return `${unsafeCount} trust warning`;
+  return `${total} checked`;
+}
+
+function getTrustAuditOutcome(trust: AgentCardTrustResult): AuditOutcome {
+  if (trust.state === 'verified' || trust.state === 'unsigned') return 'success';
+  if (trust.reason === 'untrusted_key_url' || trust.reason === 'unsafe_algorithm') {
+    return 'blocked';
+  }
+  return 'failure';
+}
+
 function auditTrustResult(
   trust: AgentCardTrustResult,
   target: { kind: 'identifier' | 'path'; value: string }
@@ -380,12 +399,7 @@ function auditTrustResult(
   recordAuditEvent({
     surface: 'a2a',
     operation: 'verify_agent_card_signature',
-    outcome:
-      trust.state === 'verified' || trust.state === 'unsigned'
-        ? 'success'
-        : trust.reason === 'untrusted_key_url' || trust.reason === 'unsafe_algorithm'
-          ? 'blocked'
-          : 'failure',
+    outcome: getTrustAuditOutcome(trust),
     target,
     detail: `trust:${trust.state}`,
   });
