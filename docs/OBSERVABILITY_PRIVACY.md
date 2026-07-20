@@ -12,7 +12,11 @@ Orbit currently uses local VS Code output channels and does not send telemetry t
 
 - No telemetry is sent by default.
 - Tokens must never be logged.
-- URLs are redacted before audit output when they may contain credentials or query values.
+- Audit targets carry an explicit type. URL targets redact credentials, query values,
+  and fragments; path, server, session, and identifier targets remain useful after
+  control-character and field-separator sanitization.
+- Legacy plaintext token settings are removed from global, workspace, and workspace-folder
+  scopes whenever SecretStorage becomes authoritative.
 - Agent Card contents, debug session text, and terminal commands remain local unless a user explicitly sends them to a configured companion service.
 - Any future telemetry must be opt-in, documented, and scoped to product-quality metrics rather than payload content.
 

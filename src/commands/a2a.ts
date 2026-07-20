@@ -54,14 +54,14 @@ export function registerA2ACommands(
           surface: 'cli',
           operation: 'validate_agent_card',
           outcome: 'started',
-          target: filePath,
+          target: { kind: 'path', value: filePath },
         });
         const result = await a2aProvider.getClient().validateAgentCard(filePath, cwd);
         recordAuditEvent({
           surface: 'cli',
           operation: 'validate_agent_card',
           outcome: result.valid ? 'success' : 'failure',
-          target: filePath,
+          target: { kind: 'path', value: filePath },
         });
         const diagnostics: vscode.Diagnostic[] = result.errors.map((msg) => {
           const diag = new vscode.Diagnostic(
@@ -89,7 +89,7 @@ export function registerA2ACommands(
           surface: 'cli',
           operation: 'validate_agent_card',
           outcome: 'failure',
-          target: filePath,
+          target: { kind: 'path', value: filePath },
         });
         vscode.window.showErrorMessage(
           `Validation failed: ${error instanceof Error ? error.message : String(error)}`
@@ -113,14 +113,14 @@ export function registerA2ACommands(
           surface: 'network',
           operation: 'discover_agent_card',
           outcome: 'started',
-          target: url,
+          target: { kind: 'url', value: url },
         });
         const card = await a2aProvider.getClient().fetchAgentCard(url);
         recordAuditEvent({
           surface: 'network',
           operation: 'discover_agent_card',
           outcome: 'success',
-          target: url,
+          target: { kind: 'url', value: url },
         });
         a2aProvider.openDetailWebviewFromCard(card);
       } catch (error) {
@@ -129,7 +129,7 @@ export function registerA2ACommands(
           surface: 'network',
           operation: 'discover_agent_card',
           outcome: policyError ? 'blocked' : 'failure',
-          target: url,
+          target: { kind: 'url', value: url },
           ...(policyError ? { detail: policyError.code } : {}),
         });
         vscode.window.showErrorMessage(
@@ -177,7 +177,7 @@ export function registerA2ACommands(
           surface: 'cli',
           operation: 'scaffold_agent',
           outcome: 'started',
-          target: targetPath,
+          target: { kind: 'path', value: targetPath },
           detail: adapter,
         });
         const output = await execFileAsync(cliPath, ['scaffold', name, '--adapter', adapter], {
@@ -196,7 +196,7 @@ export function registerA2ACommands(
           surface: 'cli',
           operation: 'scaffold_agent',
           outcome: 'success',
-          target: targetPath,
+          target: { kind: 'path', value: targetPath },
           detail: adapter,
         });
         vscode.window.showInformationMessage(
@@ -208,7 +208,7 @@ export function registerA2ACommands(
           surface: 'cli',
           operation: 'scaffold_agent',
           outcome: 'failure',
-          target: targetPath,
+          target: { kind: 'path', value: targetPath },
           detail: adapter,
         });
         vscode.window.showErrorMessage(

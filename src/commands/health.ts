@@ -37,14 +37,14 @@ export function registerHealthCommands(
           surface: 'mcp',
           operation: 'register_server',
           outcome: 'started',
-          target: url,
+          target: { kind: 'url', value: url },
         });
         await healthProvider.registerServer(name, url);
         recordAuditEvent({
           surface: 'mcp',
           operation: 'register_server',
           outcome: 'success',
-          target: url,
+          target: { kind: 'url', value: url },
         });
         vscode.window.showInformationMessage(`Server "${name}" registered.`);
       } catch (error) {
@@ -52,7 +52,7 @@ export function registerHealthCommands(
           surface: 'mcp',
           operation: 'register_server',
           outcome: 'failure',
-          target: url,
+          target: { kind: 'url', value: url },
         });
         vscode.window.showErrorMessage(
           `Failed to register server: ${error instanceof Error ? error.message : String(error)}`
@@ -82,14 +82,14 @@ export function registerHealthCommands(
           surface: 'mcp',
           operation: 'unregister_server',
           outcome: 'started',
-          target: String(serverName),
+          target: { kind: 'server', value: String(serverName) },
         });
         await healthProvider.unregisterServer(serverName);
         recordAuditEvent({
           surface: 'mcp',
           operation: 'unregister_server',
           outcome: 'success',
-          target: String(serverName),
+          target: { kind: 'server', value: String(serverName) },
         });
         vscode.window.showInformationMessage(`Server "${serverName}" removed.`);
       } catch (error) {
@@ -97,7 +97,7 @@ export function registerHealthCommands(
           surface: 'mcp',
           operation: 'unregister_server',
           outcome: 'failure',
-          target: String(serverName),
+          target: { kind: 'server', value: String(serverName) },
         });
         vscode.window.showErrorMessage(
           `Failed to remove server: ${error instanceof Error ? error.message : String(error)}`

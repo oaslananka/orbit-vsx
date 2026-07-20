@@ -11,7 +11,7 @@ import type { DebugProvider } from '../panels/debug/DebugProvider';
 import type { DebugSession } from '../panels/debug/types';
 import type { HealthProvider } from '../panels/health/HealthProvider';
 import type { McpServer } from '../panels/health/types';
-import { recordAuditEvent } from '../utils/audit';
+import { recordAuditEvent, type AuditTarget } from '../utils/audit';
 import { isPublicNetworkPolicyError } from '../utils/publicJsonFetch';
 import { redactUrl } from '../utils/urlSafety';
 import { isWorkspaceTrusted, WORKSPACE_TRUST_REQUIRED_MESSAGE } from '../utils/workspaceTrust';
@@ -246,26 +246,23 @@ class GetDebugSessionContextTool implements vscode.LanguageModelTool<GetDebugSes
     assertWorkspaceTrusted();
     throwIfCancellationRequested(token);
     const sessionId = nonEmptyString(options.input.sessionId, 'sessionId');
-    recordToolAudit(
-      ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_DEBUG_SESSION_CONTEXT,
-      'started',
-      sessionId
-    );
+    recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_DEBUG_SESSION_CONTEXT, 'started', {
+      kind: 'session',
+      value: sessionId,
+    });
     try {
       const session = await this.debugProvider.getClient().getSessionContext(sessionId);
       throwIfCancellationRequested(token);
-      recordToolAudit(
-        ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_DEBUG_SESSION_CONTEXT,
-        'success',
-        sessionId
-      );
+      recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_DEBUG_SESSION_CONTEXT, 'success', {
+        kind: 'session',
+        value: sessionId,
+      });
       return jsonToolResult({ session: summarizeDebugSession(session, true) });
     } catch (error) {
-      recordToolAudit(
-        ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_DEBUG_SESSION_CONTEXT,
-        'failure',
-        sessionId
-      );
+      recordToolAudit(ORBIT_LANGUAGE_MODEL_TOOL_NAMES.GET_DEBUG_SESSION_CONTEXT, 'failure', {
+        kind: 'session',
+        value: sessionId,
+      });
       throw asToolError(error);
     }
   }
@@ -332,7 +329,7 @@ class ValidateAgentCardTool implements vscode.LanguageModelTool<ValidateAgentCar
     recordToolAudit(
       ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
       'started',
-      options.input.url
+      options.input.url ? { kind: 'url', value: options.input.url } : undefined
     );
     try {
       if (hasJson) {
@@ -349,7 +346,7 @@ class ValidateAgentCardTool implements vscode.LanguageModelTool<ValidateAgentCar
       recordToolAudit(
         ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
         'success',
-        options.input.url
+        options.input.url ? { kind: 'url', value: options.input.url } : undefined
       );
       return jsonToolResult({
         card: summarizeAgentCard(card),
@@ -360,7 +357,7 @@ class ValidateAgentCardTool implements vscode.LanguageModelTool<ValidateAgentCar
       recordToolAudit(
         ORBIT_LANGUAGE_MODEL_TOOL_NAMES.VALIDATE_AGENT_CARD,
         isPublicNetworkPolicyError(error) ? 'blocked' : 'failure',
-        options.input.url,
+        options.input.url ? { kind: 'url', value: options.input.url } : undefined,
         policyError?.code
       );
       throw asToolError(error);
@@ -461,7 +458,7 @@ function isJsonObject(value: unknown): value is Record<string, unknown> {
 function recordToolAudit(
   tool: string,
   outcome: 'started' | 'success' | 'failure' | 'blocked',
-  target?: string,
+  target?: AuditTarget,
   detail?: string
 ): void {
   recordAuditEvent({

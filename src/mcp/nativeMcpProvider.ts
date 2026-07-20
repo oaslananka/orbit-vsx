@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { readConfig } from '../config';
 import { MCP_SERVER_DEFINITION_PROVIDER_ID } from '../constants';
 import { recordAuditEvent } from '../utils/audit';
-import { joinUrl, redactUrl } from '../utils/urlSafety';
+import { joinUrl } from '../utils/urlSafety';
 import { isWorkspaceTrusted } from '../utils/workspaceTrust';
 
 type McpServerDefinition = unknown;
@@ -102,7 +102,7 @@ export class OrbitMcpServerDefinitionProvider implements vscode.Disposable {
       operation: 'provide_mcp_server_definitions',
       outcome: 'success',
       surface: 'mcp',
-      target: definitions.map((definition) => redactDefinitionUri(definition)).join(','),
+      target: { kind: 'identifier', value: MCP_SERVER_DEFINITION_PROVIDER_ID },
     });
     return definitions;
   }
@@ -129,9 +129,4 @@ function extensionVersionFromContext(context: vscode.ExtensionContext): string {
 function bearerHeaders(token: string): Record<string, string> | undefined {
   if (!token) return undefined;
   return { Authorization: `Bearer ${token}` };
-}
-
-function redactDefinitionUri(definition: unknown): string {
-  const value = definition as { uri?: unknown };
-  return typeof value.uri === 'string' ? redactUrl(value.uri) : 'unknown';
 }

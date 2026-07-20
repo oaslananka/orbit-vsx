@@ -69,14 +69,14 @@ export function registerDebugCommands(
           surface: 'debug',
           operation: 'close_debug_session',
           outcome: 'started',
-          target: sessionId,
+          target: { kind: 'session', value: sessionId },
         });
         await debugProvider.getClient().closeSession(sessionId);
         recordAuditEvent({
           surface: 'debug',
           operation: 'close_debug_session',
           outcome: 'success',
-          target: sessionId,
+          target: { kind: 'session', value: sessionId },
         });
         vscode.window.showInformationMessage('Session closed.');
         debugProvider.refresh();
@@ -85,7 +85,7 @@ export function registerDebugCommands(
           surface: 'debug',
           operation: 'close_debug_session',
           outcome: 'failure',
-          target: sessionId,
+          target: { kind: 'session', value: sessionId },
         });
         vscode.window.showErrorMessage(
           `Failed to close session: ${error instanceof Error ? error.message : String(error)}`
@@ -162,14 +162,14 @@ export function registerDebugCommands(
           surface: 'debug',
           operation: 'record_command',
           outcome: 'started',
-          target: sessionId,
+          target: { kind: 'session', value: sessionId },
         });
         await debugProvider.getClient().recordCommand(sessionId, command);
         recordAuditEvent({
           surface: 'debug',
           operation: 'record_command',
           outcome: 'success',
-          target: sessionId,
+          target: { kind: 'session', value: sessionId },
         });
         vscode.window.showInformationMessage('Command recorded.');
       } catch (error) {
@@ -177,7 +177,7 @@ export function registerDebugCommands(
           surface: 'debug',
           operation: 'record_command',
           outcome: 'failure',
-          target: sessionId,
+          target: { kind: 'session', value: sessionId },
         });
         vscode.window.showErrorMessage(
           `Failed to record command: ${error instanceof Error ? error.message : String(error)}`
