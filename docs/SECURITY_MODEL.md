@@ -60,6 +60,14 @@ MCP JSON-RPC validation checks:
 
 A2A validation checks:
 
+- A2A 1.0 ProtoJSON security-scheme oneof wrappers (`apiKeySecurityScheme`,
+  `httpAuthSecurityScheme`, `oauth2SecurityScheme`,
+  `openIdConnectSecurityScheme`, and `mtlsSecurityScheme`);
+- canonical `securityRequirements[].schemes` scope lists and the
+  `capabilities.extendedAgentCard` capability;
+- explicit normalization of supported pre-1.0 `type`-discriminated security
+  schemes and the legacy `security` field before downstream use;
+- rejection of mixed or ambiguous legacy/current security representations;
 - required Agent Card metadata;
 - `supportedInterfaces`, `capabilities`, input/output modes, and skills;
 - public HTTPS URLs for discovered cards and card-declared endpoints;

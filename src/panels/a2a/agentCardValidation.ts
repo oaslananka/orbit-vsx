@@ -19,7 +19,14 @@ const MAX_CARD_JSON_BYTES = 256 * 1024;
 const WELL_KNOWN_AGENT_CARD_PATH = '/.well-known/agent-card.json';
 const SECRET_KEY_PATTERN =
   /(^|[-_.])(password|passwd|secret|token|access[_-]?key|private[_-]?key|client[_-]?secret)([-_.]|$)/i;
-const ALLOWED_SECURITY_SCHEME_TYPES = [
+const SECURITY_SCHEME_WRAPPER_KEYS = [
+  'apiKeySecurityScheme',
+  'httpAuthSecurityScheme',
+  'oauth2SecurityScheme',
+  'openIdConnectSecurityScheme',
+  'mtlsSecurityScheme',
+] as const;
+const LEGACY_SECURITY_SCHEME_TYPES = [
   'apiKey',
   'http',
   'oauth2',
@@ -145,12 +152,9 @@ export function validateAgentCardPayload(value: unknown, path = '$'): AgentCard 
       issues
     );
   }
-  if (record.securityRequirements !== undefined) {
-    card.securityRequirements = validateSecurityRequirements(
-      record.securityRequirements,
-      `${path}.securityRequirements`,
-      issues
-    );
+  const securityRequirements = validateCardSecurityRequirements(record, path, issues);
+  if (securityRequirements !== undefined) {
+    card.securityRequirements = securityRequirements;
   }
   if (record.signatures !== undefined) {
     card.signatures = asArray(record.signatures, `${path}.signatures`, issues).map((item, index) =>
@@ -249,6 +253,13 @@ function validateCapabilities(
       issues
     );
   }
+  if (record.extendedAgentCard !== undefined) {
+    capabilities.extendedAgentCard = asBoolean(
+      record.extendedAgentCard,
+      `${path}.extendedAgentCard`,
+      issues
+    );
+  }
   if (record.extensions !== undefined) {
     capabilities.extensions = asArray(record.extensions, `${path}.extensions`, issues).map(
       (item, index) => validateExtension(item, `${path}.extensions[${index}]`, issues)
@@ -320,51 +331,195 @@ function validateSecurityScheme(
   issues: ValidationIssue[]
 ): SecurityScheme {
   const record = asRecord(value, path, issues);
-  const type = asEnum(record.type, ALLOWED_SECURITY_SCHEME_TYPES, `${path}.type`, issues);
-  if (type === 'apiKey') {
-    const scheme = {
-      description: optionalString(record.description, `${path}.description`, issues),
-      in: asEnum(record.in, ['query', 'header', 'cookie'] as const, `${path}.in`, issues),
-      name: asNonEmptyString(record.name, `${path}.name`, issues),
-      type,
+  const wrapperKeys = SECURITY_SCHEME_WRAPPER_KEYS.filter((key) => record[key] !== undefined);
+
+  if (record.type !== undefined) {
+    if (wrapperKeys.length > 0) {
+      issues.push({ path, message: 'legacy type and A2A 1.0 wrapper must not be mixed' });
+    }
+    return validateLegacySecurityScheme(record, path, issues);
+  }
+
+  if (wrapperKeys.length !== 1) {
+    issues.push({ path, message: 'expected exactly one security scheme wrapper' });
+    return { mtlsSecurityScheme: {} };
+  }
+
+  const wrapperKey = wrapperKeys[0];
+  const wrapper = asRecord(record[wrapperKey], `${path}.${wrapperKey}`, issues);
+  if (wrapperKey === 'apiKeySecurityScheme') {
+    return {
+      apiKeySecurityScheme: omitUndefined({
+        description: optionalString(
+          wrapper.description,
+          `${path}.${wrapperKey}.description`,
+          issues
+        ),
+        location: asEnum(
+          wrapper.location,
+          ['query', 'header', 'cookie'] as const,
+          `${path}.${wrapperKey}.location`,
+          issues
+        ),
+        name: asNonEmptyString(wrapper.name, `${path}.${wrapperKey}.name`, issues),
+      }) as {
+        description?: string;
+        location: 'query' | 'header' | 'cookie';
+        name: string;
+      },
     };
-    return omitUndefined(scheme) as SecurityScheme;
+  }
+  if (wrapperKey === 'httpAuthSecurityScheme') {
+    return {
+      httpAuthSecurityScheme: omitUndefined({
+        bearerFormat: optionalString(
+          wrapper.bearerFormat,
+          `${path}.${wrapperKey}.bearerFormat`,
+          issues
+        ),
+        description: optionalString(
+          wrapper.description,
+          `${path}.${wrapperKey}.description`,
+          issues
+        ),
+        scheme: asNonEmptyString(wrapper.scheme, `${path}.${wrapperKey}.scheme`, issues),
+      }) as { bearerFormat?: string; description?: string; scheme: string },
+    };
+  }
+  if (wrapperKey === 'oauth2SecurityScheme') {
+    return {
+      oauth2SecurityScheme: omitUndefined({
+        description: optionalString(
+          wrapper.description,
+          `${path}.${wrapperKey}.description`,
+          issues
+        ),
+        flows: asRecord(wrapper.flows, `${path}.${wrapperKey}.flows`, issues),
+        oauth2MetadataUrl:
+          wrapper.oauth2MetadataUrl === undefined
+            ? undefined
+            : validatePublicHttpsUrl(
+                wrapper.oauth2MetadataUrl,
+                `${path}.${wrapperKey}.oauth2MetadataUrl`,
+                issues
+              ),
+      }) as {
+        description?: string;
+        flows: Record<string, unknown>;
+        oauth2MetadataUrl?: string;
+      },
+    };
+  }
+  if (wrapperKey === 'openIdConnectSecurityScheme') {
+    return {
+      openIdConnectSecurityScheme: omitUndefined({
+        description: optionalString(
+          wrapper.description,
+          `${path}.${wrapperKey}.description`,
+          issues
+        ),
+        openIdConnectUrl: validatePublicHttpsUrl(
+          wrapper.openIdConnectUrl,
+          `${path}.${wrapperKey}.openIdConnectUrl`,
+          issues
+        ),
+      }) as { description?: string; openIdConnectUrl: string },
+    };
+  }
+  const description = optionalString(
+    wrapper.description,
+    `${path}.${wrapperKey}.description`,
+    issues
+  );
+  return {
+    mtlsSecurityScheme: description === undefined ? {} : { description },
+  };
+}
+
+function validateLegacySecurityScheme(
+  record: Record<string, unknown>,
+  path: string,
+  issues: ValidationIssue[]
+): SecurityScheme {
+  const type = asEnum(record.type, LEGACY_SECURITY_SCHEME_TYPES, `${path}.type`, issues);
+  if (type === 'apiKey') {
+    return {
+      apiKeySecurityScheme: omitUndefined({
+        description: optionalString(record.description, `${path}.description`, issues),
+        location: asEnum(record.in, ['query', 'header', 'cookie'] as const, `${path}.in`, issues),
+        name: asNonEmptyString(record.name, `${path}.name`, issues),
+      }) as {
+        description?: string;
+        location: 'query' | 'header' | 'cookie';
+        name: string;
+      },
+    };
   }
   if (type === 'http') {
-    const scheme = {
-      bearerFormat: optionalString(record.bearerFormat, `${path}.bearerFormat`, issues),
-      description: optionalString(record.description, `${path}.description`, issues),
-      scheme: asNonEmptyString(record.scheme, `${path}.scheme`, issues),
-      type,
+    return {
+      httpAuthSecurityScheme: omitUndefined({
+        bearerFormat: optionalString(record.bearerFormat, `${path}.bearerFormat`, issues),
+        description: optionalString(record.description, `${path}.description`, issues),
+        scheme: asNonEmptyString(record.scheme, `${path}.scheme`, issues),
+      }) as { bearerFormat?: string; description?: string; scheme: string },
     };
-    return omitUndefined(scheme) as SecurityScheme;
   }
   if (type === 'oauth2') {
-    const scheme = {
-      description: optionalString(record.description, `${path}.description`, issues),
-      flows:
-        record.flows === undefined ? undefined : asRecord(record.flows, `${path}.flows`, issues),
-      type,
+    return {
+      oauth2SecurityScheme: omitUndefined({
+        description: optionalString(record.description, `${path}.description`, issues),
+        flows: record.flows === undefined ? {} : asRecord(record.flows, `${path}.flows`, issues),
+        oauth2MetadataUrl:
+          record.oauth2MetadataUrl === undefined
+            ? undefined
+            : validatePublicHttpsUrl(record.oauth2MetadataUrl, `${path}.oauth2MetadataUrl`, issues),
+      }) as {
+        description?: string;
+        flows: Record<string, unknown>;
+        oauth2MetadataUrl?: string;
+      },
     };
-    return omitUndefined(scheme) as SecurityScheme;
   }
   if (type === 'openIdConnect') {
-    const scheme = {
-      description: optionalString(record.description, `${path}.description`, issues),
-      openIdConnectUrl: validatePublicHttpsUrl(
-        record.openIdConnectUrl,
-        `${path}.openIdConnectUrl`,
-        issues
-      ),
-      type,
+    return {
+      openIdConnectSecurityScheme: omitUndefined({
+        description: optionalString(record.description, `${path}.description`, issues),
+        openIdConnectUrl: validatePublicHttpsUrl(
+          record.openIdConnectUrl,
+          `${path}.openIdConnectUrl`,
+          issues
+        ),
+      }) as { description?: string; openIdConnectUrl: string },
     };
-    return omitUndefined(scheme) as SecurityScheme;
   }
-  const scheme = {
-    description: optionalString(record.description, `${path}.description`, issues),
-    type,
+  const description = optionalString(record.description, `${path}.description`, issues);
+  return {
+    mtlsSecurityScheme: description === undefined ? {} : { description },
   };
-  return omitUndefined(scheme) as SecurityScheme;
+}
+
+function validateCardSecurityRequirements(
+  record: Record<string, unknown>,
+  path: string,
+  issues: ValidationIssue[]
+): SecurityRequirement[] | undefined {
+  if (record.securityRequirements !== undefined && record.security !== undefined) {
+    issues.push({
+      path,
+      message: 'securityRequirements and legacy security must not both be present',
+    });
+  }
+  if (record.securityRequirements !== undefined) {
+    return validateSecurityRequirements(
+      record.securityRequirements,
+      `${path}.securityRequirements`,
+      issues
+    );
+  }
+  if (record.security !== undefined) {
+    return validateSecurityRequirements(record.security, `${path}.security`, issues);
+  }
+  return undefined;
 }
 
 function validateSecurityRequirements(
@@ -373,12 +528,27 @@ function validateSecurityRequirements(
   issues: ValidationIssue[]
 ): SecurityRequirement[] {
   return asArray(value, path, issues).map((item, index) => {
-    const record = asRecord(item, `${path}[${index}]`, issues);
-    const requirement: SecurityRequirement = {};
-    for (const [schemeName, scopes] of Object.entries(record)) {
-      requirement[schemeName] = asStringArray(scopes, `${path}[${index}].${schemeName}`, issues);
+    const itemPath = `${path}[${index}]`;
+    const record = asRecord(item, itemPath, issues);
+    const schemeMap =
+      record.schemes === undefined
+        ? record
+        : asRecord(record.schemes, `${itemPath}.schemes`, issues);
+    const schemes: SecurityRequirement['schemes'] = {};
+
+    for (const [schemeName, scopes] of Object.entries(schemeMap)) {
+      if (record.schemes === undefined) {
+        schemes[schemeName] = {
+          list: asStringArray(scopes, `${itemPath}.${schemeName}`, issues),
+        };
+        continue;
+      }
+      const scopeList = asRecord(scopes, `${itemPath}.schemes.${schemeName}`, issues);
+      schemes[schemeName] = {
+        list: asStringArray(scopeList.list, `${itemPath}.schemes.${schemeName}.list`, issues),
+      };
     }
-    return requirement;
+    return { schemes };
   });
 }
 

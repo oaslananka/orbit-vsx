@@ -35,6 +35,7 @@ export interface AgentCapabilities {
   streaming?: boolean;
   pushNotifications?: boolean;
   stateTransitionHistory?: boolean;
+  extendedAgentCard?: boolean;
   extensions?: AgentExtension[];
 }
 
@@ -55,43 +56,45 @@ export interface AgentSkill {
   securityRequirements?: SecurityRequirement[];
 }
 
-export type SecurityRequirement = Record<string, string[]>;
+export interface SecurityRequirement {
+  schemes: Record<string, SecurityScopeList>;
+}
+
+export interface SecurityScopeList {
+  list: string[];
+}
 
 export type SecurityScheme =
-  | ApiKeySecurityScheme
-  | HttpAuthSecurityScheme
-  | OAuth2SecurityScheme
-  | OpenIdConnectSecurityScheme
-  | MtlsSecurityScheme;
+  | { apiKeySecurityScheme: ApiKeySecurityScheme }
+  | { httpAuthSecurityScheme: HttpAuthSecurityScheme }
+  | { oauth2SecurityScheme: OAuth2SecurityScheme }
+  | { openIdConnectSecurityScheme: OpenIdConnectSecurityScheme }
+  | { mtlsSecurityScheme: MutualTlsSecurityScheme };
 
 export interface ApiKeySecurityScheme {
-  type: 'apiKey';
+  location: 'query' | 'header' | 'cookie';
   name: string;
-  in: 'query' | 'header' | 'cookie';
   description?: string;
 }
 
 export interface HttpAuthSecurityScheme {
-  type: 'http';
   scheme: string;
   bearerFormat?: string;
   description?: string;
 }
 
 export interface OAuth2SecurityScheme {
-  type: 'oauth2';
+  flows: Record<string, unknown>;
+  oauth2MetadataUrl?: string;
   description?: string;
-  flows?: Record<string, unknown>;
 }
 
 export interface OpenIdConnectSecurityScheme {
-  type: 'openIdConnect';
   openIdConnectUrl: string;
   description?: string;
 }
 
-export interface MtlsSecurityScheme {
-  type: 'mutualTLS';
+export interface MutualTlsSecurityScheme {
   description?: string;
 }
 
