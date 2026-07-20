@@ -44,13 +44,18 @@ suite('Codecov Contracts', () => {
       workflow,
       /codecov\/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7\.0\.0/
     );
-    assert.match(
-      workflow,
-      /codecov\/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1\.2\.1/
+    assert.strictEqual(
+      Array.from(
+        workflow.matchAll(
+          /codecov\/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7\.0\.0/g
+        )
+      ).length,
+      2
     );
     assert.match(workflow, /use_oidc: true/g);
     assert.match(workflow, /files: coverage\/lcov\.info/);
     assert.match(workflow, /files: \.test-results\/junit\.xml/);
+    assert.match(workflow, /report_type: test_results/);
     assert.match(workflow, /disable_search: true/g);
     assert.match(workflow, /fail_ci_if_error: true/g);
     assert.ok(!workflow.includes('CODECOV_TOKEN'));
