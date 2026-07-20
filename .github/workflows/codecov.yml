@@ -49,7 +49,7 @@ jobs:
 
       - name: Upload LCOV coverage
         if: ${{ !cancelled() && hashFiles('coverage/lcov.info') != '' }}
-        uses: codecov/codecov-action@fb8e99b83c8d5e77f7ded98c71414d9aa38d0b1c # v7.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           use_oidc: true
           files: coverage/lcov.info
@@ -60,7 +60,7 @@ jobs:
 
       - name: Upload JUnit test results
         if: ${{ !cancelled() && hashFiles('.test-results/junit.xml') != '' }}
-        uses: codecov/test-results-action@0fae8a81d52075bfec2f1eae3e2e8a611a3794c3 # v1.2.1
+        uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1.2.1
         with:
           use_oidc: true
           files: .test-results/junit.xml

@@ -42,11 +42,11 @@ suite('Codecov Contracts', () => {
     assert.match(workflow, /quality-observability:[\s\S]*id-token: write/);
     assert.match(
       workflow,
-      /codecov\/codecov-action@fb8e99b83c8d5e77f7ded98c71414d9aa38d0b1c # v7\.0\.0/
+      /codecov\/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7\.0\.0/
     );
     assert.match(
       workflow,
-      /codecov\/test-results-action@0fae8a81d52075bfec2f1eae3e2e8a611a3794c3 # v1\.2\.1/
+      /codecov\/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1\.2\.1/
     );
     assert.match(workflow, /use_oidc: true/g);
     assert.match(workflow, /files: coverage\/lcov\.info/);
