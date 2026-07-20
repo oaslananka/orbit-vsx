@@ -128,10 +128,10 @@ Keep these checks required on `main` after they have passed on the default branc
 - `Node 24 / VS Code stable`
 - `dependency-review`
 - `analyze (javascript-typescript)`
-- `Semgrep / semgrep`
+- `semgrep`
 - `SonarCloud Code Analysis`
 - `security/snyk (oaslananka)`
 
-The exact Semgrep context should be confirmed from the first merged/default-branch
-workflow run before branch protection is changed. App-managed check names should be
-rechecked whenever either vendor integration is reinstalled or reconfigured.
+The repository-owned Semgrep workflow reports the `semgrep` context. App-managed
+check names should be rechecked whenever either vendor integration is reinstalled or
+reconfigured.
