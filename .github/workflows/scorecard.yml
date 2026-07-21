@@ -6,12 +6,18 @@ on:
   schedule:
     - cron: 0 0 * * 0
 
-permissions: read-all
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   scorecard:
     if: github.repository_owner == 'oaslananka'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       actions: read
       contents: read
@@ -19,6 +25,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
         with:

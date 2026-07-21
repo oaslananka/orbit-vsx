@@ -656,8 +656,9 @@
     "format": "prettier --write \"**/*.{json,md,yml,yaml,ts,tsx,js,mjs}\"",
     "validate:renovate": "npx --yes --package renovate@43.272.4 -- renovate-config-validator --strict --no-global renovate.json",
     "security:semgrep": "pre-commit run orbit-semgrep --all-files",
+    "security:workflow": "pre-commit run actionlint --all-files && pre-commit run shellcheck --all-files && pre-commit run zizmor --all-files",
+    "security:trivy": "bash scripts/run-trivy-config-scan.sh",
     "security:snyk": "corepack pnpm dlx snyk@1.1306.1 test --all-projects --dev --severity-threshold=high",
-    "security:local": "corepack pnpm run validate:renovate && corepack pnpm run security:semgrep",
     "test": "node ./test/runTests.js",
     "test:unit": "mocha --ui tdd \"test/unit/**/*.test.js\"",
     "test:compile": "node test/cleanGenerated.mjs && tsc -p test/tsconfig.json && node test/normalizeGenerated.mjs",
@@ -676,7 +677,8 @@
     "clean:dist": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "verify:headless": "xvfb-run -a corepack pnpm run verify",
     "check:headless-runner": "node scripts/check-headless-runner.mjs",
-    "verify:container": "bash tools/headless/verify.sh"
+    "verify:container": "bash tools/headless/verify.sh",
+    "security:local": "corepack pnpm run validate:renovate && corepack pnpm run security:semgrep && corepack pnpm run security:workflow"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -2,7 +2,7 @@
 
 Orbit uses layered checks so a single vendor or scanner is not the only line of defense.
 The repository baseline combines Renovate, GitHub Dependency Review, CodeQL, OpenSSF
-Scorecard, Semgrep CE, and the existing SonarCloud and Snyk GitHub App checks.
+Scorecard, Semgrep CE, and the existing SonarQube Cloud and Snyk GitHub App checks.
 
 ## Local setup
 
@@ -22,6 +22,7 @@ pre-commit run --all-files
 ```
 
 The default hooks perform file-hygiene checks, Prettier validation, ESLint validation,
+actionlint workflow checks, ShellCheck script checks, a zizmor workflow-security audit,
 and a repository-specific Semgrep scan. The Semgrep hook uses a pinned Python package
 version inside the isolated pre-commit environment. Snyk is available as a manual-stage
 hook because it requires authentication and should not make ordinary commits depend on
@@ -32,6 +33,8 @@ Useful local commands:
 ```bash
 pnpm run validate:renovate
 pnpm run security:semgrep
+pnpm run security:workflow
+pnpm run security:trivy   # Linux x86_64; authoritative CI scan
 pnpm run security:local
 ```
 
@@ -64,8 +67,8 @@ Validate configuration changes before opening a pull request from the Node 24 ma
 pnpm run validate:renovate
 ```
 
-The Renovate version used by this command, the Semgrep CLI version, and the Snyk CLI
-version are themselves tracked by Renovate custom managers.
+The Renovate, Semgrep, Snyk, Codecov CLI, pre-commit runner, and Trivy versions are
+tracked by Renovate. Trivy updates require manual checksum review before merge.
 
 ## Semgrep CE
 
@@ -82,6 +85,29 @@ Sensitive `security-events`, release-content, attestation, artifact-metadata, an
 OpenID Connect permissions are declared only on the jobs that require them. Every
 workflow otherwise defaults to the explicit `contents: read` permission.
 
+## GitHub workflow security
+
+`.github/workflows/workflow-security.yml` runs actionlint 1.7.12, ShellCheck 0.11.0,
+zizmor 1.27.0, and a checksum-verified Trivy 0.72.0 Dockerfile configuration scan on
+every pull request and `main` push, plus a weekly schedule. actionlint validates workflow
+syntax, expressions, action inputs, and reusable-workflow contracts. ShellCheck runs as
+a separate pinned hook over repository shell scripts so ordinary commits do not compile
+a WASM analyzer. zizmor runs offline with the regular persona so commits
+do not depend on a GitHub API token while still enforcing permissions, immutable action
+references, credential handling, and common injection protections.
+
+Every checkout disables credential persistence. Release jobs disable package-manager
+caching to prevent a pull-request-controlled cache from influencing a tagged release.
+The Trivy scan is intentionally limited to HIGH/CRITICAL misconfigurations in
+`tools/headless/Dockerfile`; Dependency Review and Snyk own dependency risk, GitHub
+Secret Protection owns pushed credentials, and CodeQL plus Orbit's Semgrep rules own
+source-code security.
+
+`CODEOWNERS` requests maintainer review for all changes and explicitly owns workflows,
+security policy, dependency automation, release operations, and the headless runner.
+Because this repository currently has one maintainer, code-owner approval is requested
+but is not a required self-review gate.
+
 ## Property-based security tests
 
 `test/unit/security-fuzz.test.ts` uses the exact-pinned `fast-check` development
@@ -93,15 +119,15 @@ regression vectors.
 Managed Semgrep can be adopted later, but the tokenless CE workflow remains the minimum
 portable baseline.
 
-## SonarCloud
+## SonarQube Cloud
 
-The installed SonarCloud GitHub integration already publishes the
+The installed SonarQube Cloud GitHub integration still publishes the legacy-named
 `SonarCloud Code Analysis` check on pull requests. Orbit intentionally does not add a
 second repository workflow for the same project: duplicate automatic and CI-based
 analysis creates conflicting analysis modes and duplicate status checks.
 
-Manage the project binding, Quality Gate, exclusions, and analysis mode in SonarCloud.
-When changing analysis modes, keep exactly one of SonarCloud Automatic Analysis or a
+Manage the project binding, Quality Gate, exclusions, and analysis mode in SonarQube Cloud.
+When changing analysis modes, keep exactly one of SonarQube Cloud Automatic Analysis or a
 CI-based scanner enabled. Record any future migration to CI-based analysis in a
 separate issue and remove the app-managed check only after the replacement has passed
 on `main`.
@@ -126,25 +152,25 @@ configuration.
 
 ## Credentials and pull requests
 
-- Never commit SonarCloud or Snyk credentials.
+- Never commit SonarQube Cloud or Snyk credentials.
 - The repository-owned Semgrep CE workflow needs no third-party token.
 - Fork pull requests continue to receive the standard CI, CodeQL, Dependency Review,
   and Semgrep checks supported by their GitHub permissions.
-- SonarCloud and Snyk access, organization membership, and service configuration are
+- SonarQube Cloud and Snyk access, organization membership, and service configuration are
   managed through their installed GitHub Apps rather than repository workflow files.
 
 ## Required checks
 
-Keep these checks required on `main` after they have passed on the default branch:
+Keep these repository-owned checks required on `main` after they have passed on the default branch:
 
 - `Node 22 / VS Code 1.100.0`
 - `Node 24 / VS Code stable`
 - `dependency-review`
 - `analyze (javascript-typescript)`
 - `semgrep`
-- `SonarCloud Code Analysis`
-- `security/snyk (oaslananka)`
+- `Coverage, tests, and bundles`
+- `actionlint, ShellCheck, zizmor, and Trivy`
 
-The repository-owned Semgrep workflow reports the `semgrep` context. App-managed
-check names should be rechecked whenever either vendor integration is reinstalled or
-reconfigured.
+SonarQube Cloud, Snyk, and Codecov patch/project statuses remain visible review signals,
+but are not duplicate blocking gates. Promote a vendor status only when it owns a unique
+policy that repository-owned checks do not already enforce.
