@@ -28,17 +28,22 @@ const EXTENSION_ID = 'oaslananka.orbit-vsx';
 const ORBIT_CONTAINER_ID = 'orbit';
 const CORE_VIEW_IDS = ['orbit.health', 'orbit.debug', 'orbit.a2a', 'orbit.mcp.explorer'];
 const EXPECTED_README_SECTIONS = [
+  '## What Orbit provides',
   '## Installation',
-  '## Features',
+  '## Quick start',
+  '## Companion services and defaults',
+  '## Feature details',
   '### Health Monitor',
+  '### MCP Explorer',
   '### Debug Recorder',
   '### A2A Explorer',
-  '### MCP Explorer',
-  '## Quick Start',
-  '## Requirements',
+  '### Agent Mode tools',
   '## Configuration',
-  '## Usage',
+  '## Commands and usage',
+  '## Security and trust',
   '## Troubleshooting',
+  '## Development and verification',
+  '## Maintainer resources',
   '## Contributing',
   '## License',
 ];

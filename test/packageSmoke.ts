@@ -48,7 +48,11 @@ const FORBIDDEN_PACKAGE_ENTRIES = [
   'extension/codecov.yml',
   'extension/codecov-bundle.config.json',
 ];
-const FORBIDDEN_PACKAGE_PREFIXES = ['extension/coverage/', 'extension/.test-results/'];
+const FORBIDDEN_PACKAGE_PREFIXES = [
+  'extension/coverage/',
+  'extension/.test-results/',
+  'extension/docs/superpowers/',
+];
 
 function assertPackagedContents(vsixPath: string): void {
   const result = spawnSync('unzip', ['-Z1', vsixPath], {
