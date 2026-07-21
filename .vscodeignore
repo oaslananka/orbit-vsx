@@ -47,3 +47,4 @@ sonar-project.properties
 .dockerignore
 scripts/
 tools/
+docs/superpowers/

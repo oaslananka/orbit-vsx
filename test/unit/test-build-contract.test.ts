@@ -30,6 +30,7 @@ suite('Test Build Contracts', () => {
       '.orbit-test-artifacts/',
       'scripts/',
       'tools/',
+      'docs/superpowers/',
       '.semgrep.yml',
       'sonar-project.properties',
       '.test-results/',
