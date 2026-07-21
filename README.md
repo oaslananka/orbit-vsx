@@ -76,7 +76,7 @@ A signed release package is also available from
 To install a downloaded package from the command line:
 
 ```powershell
-code --install-extension .\orbit-vsx-0.6.0.vsix
+code --install-extension .\orbit-vsx-0.6.1.vsix
 ```
 
 The extension identifier is `oaslananka.orbit-vsx`.

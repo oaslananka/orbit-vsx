@@ -12,8 +12,8 @@ The `main` branch is protected. Required checks are:
 - `dependency-review`
 - `analyze (javascript-typescript)`
 - `semgrep`
-- `SonarCloud Code Analysis`
-- `security/snyk (oaslananka)`
+- `Coverage, tests, and bundles`
+- `actionlint, ShellCheck, zizmor, and Trivy`
 
 The weekly compatibility workflow additionally tests current VS Code stable and reports
 Insiders regressions as a non-blocking early-warning lane. Branch deletion and force-push
@@ -61,20 +61,20 @@ sha256sum -c SHA256SUMS.txt
 Verify the VSIX provenance online against the exact repository, signer workflow, and tag:
 
 ```bash
-gh attestation verify orbit-vsx-0.6.0.vsix \
+gh attestation verify orbit-vsx-0.6.1.vsix \
   --repo oaslananka/orbit-vsx \
   --signer-workflow oaslananka/orbit-vsx/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.6.0
+  --source-ref refs/tags/v0.6.1
 ```
 
 The same provenance can be checked without fetching the attestation from the GitHub API
 when the release bundle is already downloaded:
 
 ```bash
-gh attestation verify orbit-vsx-0.6.0.vsix \
+gh attestation verify orbit-vsx-0.6.1.vsix \
   --repo oaslananka/orbit-vsx \
   --signer-workflow oaslananka/orbit-vsx/.github/workflows/release.yml \
-  --source-ref refs/tags/v0.6.0 \
+  --source-ref refs/tags/v0.6.1 \
   --bundle orbit-vsx.provenance.bundle.json
 ```
 
