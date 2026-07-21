@@ -25,7 +25,7 @@ suite('README Contracts', () => {
       readme,
       /MCP health, debug session intelligence, and A2A trust workflows for VS Code/
     );
-    assert.match(readme, /This repository owns the VS Code extension surface/);
+    assert.match(readme, /This repository owns the VS Code extension\s+surface/);
   });
 
   test('Should expose live repository and distribution badges', () => {

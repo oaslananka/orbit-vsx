@@ -8,6 +8,10 @@
 - Publish LCOV coverage, JUnit test analytics, and production esbuild bundle trends to Codecov using GitHub OIDC without a long-lived upload token.
 - Verify A2A Agent Card JWS signatures with RFC 8785 canonicalization, ES256/RS256 allowlists, same-origin or explicitly trusted HTTPS JWKS resolution, bounded key caching, and explicit trust states across trees, webviews, diagnostics, Language Model Tools, and audit output.
 
+### Changed
+
+- Redesign the repository README as a product landing page with live quality, coverage, distribution, governance, and support links while preserving companion-service and security guidance.
+
 ### Fixed
 
 - Remap Codecov LCOV paths to tracked TypeScript sources and reject empty or compiled-JavaScript coverage reports before upload.
