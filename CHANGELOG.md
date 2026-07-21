@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-21
+
 ### Added
 
 - Add CODEOWNERS, actionlint, zizmor, least-privilege checkout/release hardening, and a checksum-pinned Trivy Dockerfile configuration scan.
