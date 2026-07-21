@@ -1,0 +1,11 @@
+# Default ownership for all repository changes.
+* @oaslananka
+
+# Security-sensitive automation and governance surfaces.
+/.github/ @oaslananka
+/.pre-commit-config.yaml @oaslananka
+/renovate.json @oaslananka
+/SECURITY.md @oaslananka
+/RELEASING.md @oaslananka
+/tools/headless/ @oaslananka
+/scripts/run-trivy-config-scan.sh @oaslananka

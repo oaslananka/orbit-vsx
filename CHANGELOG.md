@@ -4,6 +4,7 @@
 
 ### Added
 
+- Add CODEOWNERS, actionlint, zizmor, least-privilege checkout/release hardening, and a checksum-pinned Trivy Dockerfile configuration scan.
 - Publish LCOV coverage, JUnit test analytics, and production esbuild bundle trends to Codecov using GitHub OIDC without a long-lived upload token.
 - Verify A2A Agent Card JWS signatures with RFC 8785 canonicalization, ES256/RS256 allowlists, same-origin or explicitly trusted HTTPS JWKS resolution, bounded key caching, and explicit trust states across trees, webviews, diagnostics, Language Model Tools, and audit output.
 

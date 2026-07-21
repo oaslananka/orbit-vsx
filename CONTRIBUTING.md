@@ -56,12 +56,14 @@ pre-commit install
 pre-commit run --all-files
 pnpm run validate:renovate
 pnpm run security:semgrep
+pnpm run security:workflow
+pnpm run security:trivy
 ```
 
 `pnpm run security:snyk` and the manual `orbit-snyk` pre-commit stage are available
-when Snyk authentication is configured. SonarCloud and Snyk pull-request checks are
+when Snyk authentication is configured. SonarQube Cloud and Snyk pull-request checks are
 provided by the installed GitHub Apps; see `docs/SECURITY_TOOLING.md` for local use and
-branch-protection guidance.
+branch-protection guidance. See `docs/REPOSITORY_GOVERNANCE.md` for merge and required-check policy.
 
 Remove generated `.vsix` files after package verification unless you are
 publishing a release artifact.

@@ -109,6 +109,12 @@
       "matchManagers": ["dockerfile"],
       "matchFileNames": ["tools/headless/Dockerfile"],
       "enabled": false
+    },
+    {
+      "description": "Review Trivy release updates manually because the archive checksum must be refreshed.",
+      "matchPackageNames": ["aquasecurity/trivy"],
+      "automerge": false,
+      "labels": ["dependencies", "area:ci", "area:security", "risk:medium"]
     }
   ],
   "customManagers": [
@@ -151,6 +157,35 @@
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Update the pinned Codecov CLI used by both report uploads.",
+      "managerFilePatterns": ["/^\\.github/workflows/codecov\\.yml$/"],
+      "matchStrings": ["version: v(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "codecov/codecov-cli",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Update the pinned pre-commit runner used by workflow security CI.",
+      "managerFilePatterns": ["/^\\.github/workflows/workflow-security\\.yml$/"],
+      "matchStrings": ["pre-commit==(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "pre-commit",
+      "datasourceTemplate": "pypi",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Update the checksum-pinned Trivy release version; checksum review remains manual.",
+      "managerFilePatterns": ["/^scripts/run-trivy-config-scan\\.sh$/"],
+      "matchStrings": [
+        "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\nTRIVY_VERSION='(?<currentValue>\\d+\\.\\d+\\.\\d+)'"
+      ],
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver",
+      "extractVersionTemplate": "^v?(?<version>.*)$"
     }
   ]
 }
