@@ -35,8 +35,7 @@ interface DebugSession {
 }
 
 type DebugMessage =
-  | { type: 'update'; payload: DebugSession }
-  | { type: 'error'; payload: { message?: string } };
+  { type: 'update'; payload: DebugSession } | { type: 'error'; payload: { message?: string } };
 
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : null;
 
