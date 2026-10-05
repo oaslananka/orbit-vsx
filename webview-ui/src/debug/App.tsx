@@ -35,8 +35,7 @@ interface DebugSession {
 }
 
 type DebugMessage =
-  | { type: 'update'; payload: DebugSession }
-  | { type: 'error'; payload: { message?: string } };
+  { type: 'update'; payload: DebugSession } | { type: 'error'; payload: { message?: string } };
 
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : null;
 
@@ -86,6 +85,9 @@ function App() {
 
   useEffect(() => {
     const handler = (event: MessageEvent<DebugMessage>) => {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
       const message = event.data;
       if (message.type === 'update') {
         setSession(message.payload);

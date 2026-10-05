@@ -63,6 +63,9 @@ suite('Release Provenance Contracts', () => {
       'brace-expansion@<1.1.16',
       'brace-expansion@>=2.0.0 <2.1.2',
       'brace-expansion@>=3.0.0 <5.0.7',
+      'fast-uri',
+      'qs',
+      'markdown-it',
     ];
 
     assert.match(workspace, /docs\/PNPM_OVERRIDES\.md/);
@@ -79,9 +82,13 @@ suite('Release Provenance Contracts', () => {
     assert.match(overrideDocument, /GHSA-3jxr-9vmj-r5cp/);
     assert.match(overrideDocument, /GHSA-g796-fgmg-93mv/);
     assert.match(overrideDocument, /GHSA-724g-mxrg-4qvm/);
+    assert.match(overrideDocument, /GHSA-hrr3-gc8f-f4qj/);
+    assert.match(overrideDocument, /GHSA-x5fp-wj9c-mxmx/);
+    assert.match(overrideDocument, /GHSA-4mjr-xmp4-gh2g/);
+    assert.match(overrideDocument, /GHSA-253c-mchw-3w2r/);
     assert.match(overrideDocument, /GHSA-395f-4hp3-45gv/);
     assert.match(workspace, /shell-quote: 1\.9\.0/);
-    assert.match(workspace, /js-yaml: 5\.2\.1/);
+    assert.match(workspace, /js-yaml: 5\.4\.2/);
   });
 
   test('Should expose consistent Apache-2.0 metadata and the complete license text', () => {
