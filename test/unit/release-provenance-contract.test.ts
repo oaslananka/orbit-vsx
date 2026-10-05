@@ -88,7 +88,7 @@ suite('Release Provenance Contracts', () => {
     assert.match(overrideDocument, /GHSA-253c-mchw-3w2r/);
     assert.match(overrideDocument, /GHSA-395f-4hp3-45gv/);
     assert.match(workspace, /shell-quote: 1\.9\.0/);
-    assert.match(workspace, /js-yaml: 5.4.2/);
+    assert.match(workspace, /js-yaml: 5\.4\.2/);
   });
 
   test('Should expose consistent Apache-2.0 metadata and the complete license text', () => {
