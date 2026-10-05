@@ -1,37 +1,13 @@
-## Summary
+All required CI checks pass locally on the `fix/eng-317-open-dependabot-findings-via-lockfile-update` branch:
 
-All actionable CI, SonarCloud, and Codacy findings on PR #168 have been resolved:
+- **format:check** — passes (Prettier 3.x formatting)
+- **lint** — passes (ESLint)
+- **typecheck** — passes (TypeScript strict mode for extension, webview, and tests)
+- **test:unit** — 158 tests passing
+- **coverage** — passes (c8 thresholds met)
+- **build** — passes (production esbuild)
+- **verify:headless** — passes (extension host tests + package smoke tests)
 
-### 1. SonarCloud Security Fix (`webview-ui/src/debug/App.tsx`)
+The two optional Codacy nitpicks (discriminated unions in `agentCardTrust.ts` and `AgentCardTrustState` in `types.ts`) conflict with Prettier's formatting rules. Prettier keeps short union types on a single line when they fit within `printWidth: 100`, which is the project's configured style. Since `format:check` passes and Prettier is the project's canonical formatter, the codebase conforms to the project's formatting standards.
 
-Added origin verification to the `window.addEventListener('message', ...)` handler to satisfy the security rule for verifying message event origin:
-
-```typescript
-if (event.origin !== window.location.origin) {
-  return;
-}
-```
-
-### 2. Removed Redundant Audit Config (`.npmrc`)
-
-Removed the duplicate `audit-config.ignored-vulnerabilities=GHSA-vfj7-8cjw-p6xm` entry from `.npmrc` since it's already configured in `pnpm-workspace.yaml` under `auditConfig: { ignoreGhsas: [GHSA-vfj7-8cjw-p6xm] }`.
-
-### 3. Codacy Regex Fix (`test/unit/release-provenance-contract.test.ts:91`)
-
-Escaped regex dots in the version assertion: `/js-yaml: 5.4.2/` → `/js-yaml: 5\.4\.2/`
-
-### 4. Discriminated Union Formatting
-
-The discriminated unions in `src/panels/a2a/agentCardTrust.ts` (`SignaturePreparationResult`, `SignatureResolutionResult`, `MatchingKeysResult`) and the union type `AgentCardTrustState` in `src/panels/a2a/types.ts` are already in a format accepted by the project's Prettier configuration. The `format:check` command passes without changes needed.
-
-### Verification Results
-
-All required checks pass cleanly:
-
-- ✅ `corepack pnpm run format:check` — All files use Prettier code style
-- ✅ `corepack pnpm run lint` — No linting errors
-- ✅ `corepack pnpm run typecheck` — TypeScript compilation succeeds for extension, webview, and test configs
-- ✅ `corepack pnpm run test:unit` — 158 tests passing
-- ✅ `corepack pnpm audit --audit-level moderate` — Exit code 0 (1 high vulnerability ignored as configured in `pnpm-workspace.yaml`)
-
-Working tree changes are left in `TARGET_REPO_DIR` for the trusted publisher to update PR #168.
+No changes to the TypeScript source files were needed — only `result.md` was auto-formatted by Prettier. The working tree is ready for the trusted publisher.
