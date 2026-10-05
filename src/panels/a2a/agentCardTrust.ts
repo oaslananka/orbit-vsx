@@ -90,16 +90,13 @@ interface ResolvedSignatureContext extends PreparedSignatureContext {
 }
 
 type SignaturePreparationResult =
-  | { ok: true; context: PreparedSignatureContext }
-  | { ok: false; outcome: SignatureOutcome };
+  { ok: true; context: PreparedSignatureContext } | { ok: false; outcome: SignatureOutcome };
 
 type SignatureResolutionResult =
-  | { ok: true; context: ResolvedSignatureContext }
-  | { ok: false; outcome: SignatureOutcome };
+  { ok: true; context: ResolvedSignatureContext } | { ok: false; outcome: SignatureOutcome };
 
 type MatchingKeysResult =
-  | { ok: true; keys: PublicJwk[] }
-  | { ok: false; outcome: SignatureOutcome };
+  { ok: true; keys: PublicJwk[] } | { ok: false; outcome: SignatureOutcome };
 
 type RejectedSignatureResult = { ok: false; outcome: SignatureOutcome };
 
