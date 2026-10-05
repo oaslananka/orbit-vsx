@@ -110,12 +110,7 @@ export interface AuthScheme {
 }
 
 export type AgentCardTrustState =
-  | 'unsigned'
-  | 'unverified'
-  | 'verified'
-  | 'schema_invalid'
-  | 'invalid'
-  | 'key-unavailable';
+  'unsigned' | 'unverified' | 'verified' | 'schema_invalid' | 'invalid' | 'key-unavailable';
 
 export type AgentCardTrustReason =
   | 'verified'
