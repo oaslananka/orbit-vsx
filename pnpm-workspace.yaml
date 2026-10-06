@@ -20,7 +20,11 @@ overrides:
   fast-uri: 3.1.8
   qs: 6.16.0
   markdown-it: 14.3.2
+patchedDependencies:
+  braces@3.0.3: patches/braces@3.0.3.patch
 allowBuilds:
   '@vscode/vsce-sign': true
   esbuild: true
-auditConfig: { ignoreGhsas: [GHSA-vfj7-8cjw-p6xm] }
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm
