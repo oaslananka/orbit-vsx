@@ -85,7 +85,7 @@ function App() {
 
   useEffect(() => {
     const handler = (event: MessageEvent<DebugMessage>) => {
-      if (event.origin !== window.location.origin) {
+      if (event.origin !== window.origin) {
         return;
       }
       const message = event.data;
