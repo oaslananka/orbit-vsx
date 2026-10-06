@@ -86,7 +86,7 @@ suite('Release Provenance Contracts', () => {
     assert.match(overrideDocument, /GHSA-x5fp-wj9c-mxmx/);
     assert.match(overrideDocument, /GHSA-4mjr-xmp4-gh2g/);
     assert.match(overrideDocument, /GHSA-253c-mchw-3w2r/);
-    assert.match(overrideDocument, /GHSA-395f-4hp3-45gv/);
+    assert.match(overrideDocument, /GHSA-pqg4-j6r4-53mv/);
     assert.match(overrideDocument, /GHSA-4cwx-7wf7-3272/);
     assert.match(overrideDocument, /GHSA-rfgv-xxqx-mfg5/);
     assert.match(overrideDocument, /GHSA-w293-vg96-wgc3/);
@@ -94,7 +94,7 @@ suite('Release Provenance Contracts', () => {
     assert.match(overrideDocument, /GHSA-r3ph-w7gj-g6xm/);
     assert.match(overrideDocument, /GHSA-q2hr-2g5m-vwhr/);
     assert.match(overrideDocument, /GHSA-8xcm-r25x-g524/);
-    assert.match(workspace, /shell-quote: 1\.9\.0/);
+    assert.match(workspace, /shell-quote: 1\.12\.0/);
     assert.match(workspace, /js-yaml: 5\.4\.2/);
   });
 
