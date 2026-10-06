@@ -7,6 +7,7 @@ RUN /usr/local/bin/install-orbit-headless-deps
 
 WORKDIR /workspace
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY patches/ ./patches/
 RUN corepack enable \
   && corepack prepare "$(node -p "require('./package.json').packageManager")" --activate \
   && corepack pnpm install --frozen-lockfile
