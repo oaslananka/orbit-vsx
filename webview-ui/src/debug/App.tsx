@@ -85,6 +85,9 @@ function App() {
 
   useEffect(() => {
     const handler = (event: MessageEvent<DebugMessage>) => {
+      if (event.origin !== window.origin) {
+        return;
+      }
       const message = event.data;
       if (message.type === 'update') {
         setSession(message.payload);
