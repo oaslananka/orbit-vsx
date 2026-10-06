@@ -20,7 +20,7 @@ overrides:
   fast-uri: 3.1.8
   qs: 6.16.0
   markdown-it: 14.3.2
+  braces: github:micromatch/braces#28d440b5dd449dbf1fe6f3506cf94ecca4d02660
 allowBuilds:
   '@vscode/vsce-sign': true
   esbuild: true
-auditConfig: { ignoreGhsas: [GHSA-vfj7-8cjw-p6xm] }
