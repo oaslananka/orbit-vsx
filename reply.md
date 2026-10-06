@@ -6,7 +6,7 @@ Successfully completed the security remediation for PR #169 (round 2) by replaci
 
 1. **`.npmrc`** - Removed `block-exotic-subdeps=false` (security risk that disabled pnpm's protection against supply chain attacks)
 
-2. **`pnpm-workspace.yaml`** - 
+2. **`pnpm-workspace.yaml`** -
    - Removed the git URL override: `braces: github:micromatch/braces#28d440b5dd449dbf1fe6f3506cf94ecca4d02660`
    - Added `patchedDependencies` entry pointing to local patch file
 
