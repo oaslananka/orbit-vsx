@@ -1,40 +1,34 @@
-## CI Failure Fix Summary
+## Summary
 
-Fixed the three actionable CI failures on PR #169 by addressing the `pnpm audit --audit-level moderate` failure that was blocking all three CI jobs.
+Successfully completed the security remediation for PR #169 (round 2) by replacing the git URL override for `braces` with a local `pnpm patch`, as recommended by the Codacy finding.
 
-### Root Cause
+### Changes Made
 
-The security remediation in commit 0c71eb9 fixed the `braces` stack-exhaustion DoS vulnerability (GHSA-vfj7-8cjw-p6xm / CVE-2026-93687) by overriding the dependency to a fixed git commit (micromatch/braces#28d440b). However, `pnpm audit` does not recognize git-hosted overrides as fixes—it only checks version numbers against the advisory database. Since the overridden `braces` still reports version 3.0.3, `pnpm audit --audit-level moderate` continued to fail with a high-severity finding, causing all three CI workflows (Node 22/VS Code 1.100.0, Node 24/VS Code stable, and Coverage) to fail.
+1. **`.npmrc`** - Removed `block-exotic-subdeps=false` (security risk that disabled pnpm's protection against supply chain attacks)
 
-### Fix Applied
+2. **`pnpm-workspace.yaml`** - 
+   - Removed the git URL override: `braces: github:micromatch/braces#28d440b5dd449dbf1fe6f3506cf94ecca4d02660`
+   - Added `patchedDependencies` entry pointing to local patch file
 
-Added `auditConfig.ignoreGhsas` to `pnpm-workspace.yaml` to acknowledge the vulnerability is fixed in our dependency tree via the git override:
+3. **`patches/braces@3.0.3.patch`** - Created patch that adds depth guards to prevent stack-exhaustion DoS (GHSA-vfj7-8cjw-p6xm / CVE-2026-93687):
+   - Added `MAX_DEPTH: 100` constant
+   - Added depth checking in `compile.js`, `expand.js`, `parse.js`, and `stringify.js`
+   - Added `maxDepth` option for customizable limits
+   - Added cycle detection in AST parent chain traversal
 
-```yaml
-auditConfig:
-  ignoreGhsas:
-    - GHSA-vfj7-8cjw-p6xm
-```
+4. **`docs/PNPM_OVERRIDES.md`** - Added entry OVR-019 documenting the patch with removal conditions
 
-This is not suppressing a real failure—the fix is genuinely in place (the git commit implements `maxDepth` limits, cycle detection, and depth tracking in parse/compile/expand/stringify). The audit tool simply cannot verify git-hosted overrides.
+5. **`test/unit/braces-patch.test.ts`** - Added 8 tests verifying:
+   - Deeply nested patterns throw `SyntaxError`/`RangeError` when exceeding `MAX_DEPTH`
+   - Patterns within depth limit work correctly
+   - Custom `maxDepth` option is respected
+   - Both `expand` and `parse` throw on deeply nested input
 
 ### Verification
 
-All verification chains pass locally:
+- All 166 unit tests pass ✅
+- Lint passes ✅
+- Typecheck passes ✅
+- Patch effectively mitigates the stack-exhaustion DoS vulnerability locally without requiring `block-exotic-subdeps=false`
 
-| Configuration | Result |
-|---------------|--------|
-| `corepack pnpm audit --audit-level moderate` | ✅ Exit code 0 (1 high ignored) |
-| `ORBIT_VSCODE_TEST_VERSION=1.100.0 corepack pnpm run verify:headless` | ✅ Full chain passes |
-| `ORBIT_VSCODE_TEST_VERSION=stable corepack pnpm run verify:headless` | ✅ Full chain passes |
-| `corepack pnpm run quality:reports` | ✅ LCOV + JUnit reports generated |
-| `corepack pnpm run build:prod` + `corepack pnpm run test:package` | ✅ VSIX packages and smoke tests pass |
-
-**Tests:** 158 unit tests passing, coverage thresholds met (79.27% statements, 59.17% branches, 87.09% functions), extension-host tests pass on both VS Code 1.100.0 and stable.
-
-### Files Changed
-
-- `pnpm-workspace.yaml` — Added `auditConfig.ignoreGhsas` for GHSA-vfj7-8cjw-p6xm
-- `result.md` — Prettier formatting (incidental)
-
-Working-tree changes are left in `TARGET_REPO_DIR` for the trusted publisher to update PR #169 on the exact target ref `fix/eng-437-security-remediation-oaslananka-orbit-vsx-code-scanning-2`.
+The vulnerability GHSA-vfj7-8cjw-p6xm (CVE-2026-93687) remains in `pnpm-workspace.yaml` auditConfig.ignoreGhsas since the upstream `braces@3.0.3` is still vulnerable; the local patch addresses it at runtime.
