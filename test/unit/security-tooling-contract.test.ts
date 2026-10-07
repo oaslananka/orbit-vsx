@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 interface RenovatePackageRule {
+  addLabels?: string[];
   automerge?: boolean;
   enabled?: boolean;
   labels?: string[];
@@ -63,11 +64,15 @@ suite('Security Tooling Contracts', () => {
 
     const safeAutomergeRule = config.packageRules?.find(
       (rule) =>
-        rule.automerge === true &&
+        rule.automerge === false &&
+        rule.addLabels?.includes('automerge:enabled') &&
         rule.matchUpdateTypes?.includes('patch') &&
         rule.matchUpdateTypes?.includes('digest')
     );
-    assert.ok(safeAutomergeRule, 'patch and digest updates should have an explicit safe lane');
+    assert.ok(
+      safeAutomergeRule,
+      'patch and digest updates should have an explicit Mergify safe lane via automerge:enabled label'
+    );
 
     const majorRule = config.packageRules?.find(
       (rule) => rule.automerge === false && rule.matchUpdateTypes?.includes('major')
