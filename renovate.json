@@ -170,7 +170,7 @@
     {
       "customType": "regex",
       "description": "Update the pinned pre-commit runner used by workflow security CI.",
-      "managerFilePatterns": ["/^\\.github/workflows/workflow-security\\.yml$/"],
+      "managerFilePatterns": ["/^\\.github/requirements-pre-commit\\.txt$/"],
       "matchStrings": ["pre-commit==(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
       "depNameTemplate": "pre-commit",
       "datasourceTemplate": "pypi",
