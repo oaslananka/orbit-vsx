@@ -1,156 +1,83 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:best-practices"
-  ],
+  "extends": ["config:best-practices"],
   "timezone": "Europe/Istanbul",
-  "schedule": [
-    "before 6am on monday"
-  ],
+  "schedule": ["before 6am on monday"],
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "Dependency Dashboard",
   "prConcurrentLimit": 5,
   "prHourlyLimit": 2,
   "branchConcurrentLimit": 8,
-  "labels": [
-    "dependencies"
-  ],
+  "labels": ["dependencies"],
   "commitMessagePrefix": "chore(deps):",
   "rebaseWhen": "behind-base-branch",
   "vulnerabilityAlerts": {
     "enabled": true,
     "prCreation": "immediate",
     "automerge": false,
-    "labels": [
-      "dependencies",
-      "security",
-      "risk:high",
-      "requires-review"
-    ],
+    "labels": ["dependencies", "security", "risk:high", "requires-review"],
     "vulnerabilityFixStrategy": "highest"
   },
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": [
-      "before 5am on monday"
-    ],
+    "schedule": ["before 5am on monday"],
     "automerge": false,
-    "labels": [
-      "dependencies",
-      "area:ci",
-      "theme:supply-chain"
-    ],
-    "addLabels": [
-      "automerge:enabled",
-      "risk:low"
-    ]
+    "labels": ["dependencies", "area:ci", "theme:supply-chain"],
+    "addLabels": ["automerge:enabled", "risk:low"]
   },
   "packageRules": [
     {
       "description": "Delegate low-risk dependency merging to Mergify.",
-      "matchUpdateTypes": [
-        "patch",
-        "digest",
-        "pin"
-      ],
+      "matchUpdateTypes": ["patch", "digest", "pin"],
       "automerge": false,
-      "addLabels": [
-        "automerge:enabled",
-        "risk:low"
-      ]
+      "addLabels": ["automerge:enabled", "risk:low"]
     },
     {
       "description": "Do not auto-raise the supported VS Code or Node runtime floor.",
-      "matchManagers": [
-        "npm"
-      ],
-      "matchDepTypes": [
-        "engines"
-      ],
-      "matchPackageNames": [
-        "vscode",
-        "node"
-      ],
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["engines"],
+      "matchPackageNames": ["vscode", "node"],
       "enabled": false
     },
     {
       "description": "The VS Code API type floor follows engines.vscode and requires an explicit compatibility decision.",
-      "matchPackageNames": [
-        "@types/vscode"
-      ],
+      "matchPackageNames": ["@types/vscode"],
       "enabled": false
     },
     {
       "description": "Keep @types/node on the supported Node 22 major until the runtime floor changes.",
-      "matchPackageNames": [
-        "@types/node"
-      ],
-      "matchUpdateTypes": [
-        "major"
-      ],
+      "matchPackageNames": ["@types/node"],
+      "matchUpdateTypes": ["major"],
       "enabled": false
     },
     {
       "description": "Automerge low-risk patch, pin, and digest updates after protected checks pass.",
-      "matchUpdateTypes": [
-        "patch",
-        "pin",
-        "digest"
-      ],
+      "matchUpdateTypes": ["patch", "pin", "digest"],
       "automerge": false,
       "automergeType": "pr",
-      "addLabels": [
-        "dependencies",
-        "risk:low",
-        "automerge:enabled"
-      ]
+      "addLabels": ["dependencies", "risk:low", "automerge:enabled"]
     },
     {
       "description": "Automerge minor development-tool updates after protected checks pass.",
-      "matchDepTypes": [
-        "devDependencies"
-      ],
-      "matchUpdateTypes": [
-        "minor"
-      ],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor"],
       "automerge": false,
       "automergeType": "pr",
-      "addLabels": [
-        "dependencies",
-        "area:ci",
-        "risk:low",
-        "automerge:enabled"
-      ]
+      "addLabels": ["dependencies", "area:ci", "risk:low", "automerge:enabled"]
     },
     {
       "description": "Automerge non-major GitHub Action updates while keeping immutable digests.",
-      "matchManagers": [
-        "github-actions"
-      ],
-      "matchUpdateTypes": [
-        "digest",
-        "patch",
-        "minor"
-      ],
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["digest", "patch", "minor"],
       "automerge": false,
       "automergeType": "pr",
-      "addLabels": [
-        "dependencies",
-        "area:ci",
-        "theme:supply-chain",
-        "automerge:enabled"
-      ]
+      "addLabels": ["dependencies", "area:ci", "theme:supply-chain", "automerge:enabled"]
     },
     {
       "description": "Review major updates manually.",
-      "matchUpdateTypes": [
-        "major"
-      ],
+      "matchUpdateTypes": ["major"],
       "automerge": false,
-      "labels": [
-        "dependencies",
-        "risk:high"
-      ]
+      "labels": ["dependencies", "risk:high"]
     },
     {
       "description": "Review compatibility-sensitive minor updates manually.",
@@ -166,25 +93,13 @@
         "@vscode/vsce",
         "ovsx"
       ],
-      "matchUpdateTypes": [
-        "minor",
-        "major"
-      ],
+      "matchUpdateTypes": ["minor", "major"],
       "automerge": false,
-      "labels": [
-        "dependencies",
-        "area:compatibility",
-        "risk:medium"
-      ]
+      "labels": ["dependencies", "area:compatibility", "risk:medium"]
     },
     {
       "description": "Group React runtime and type updates for one compatibility review.",
-      "matchPackageNames": [
-        "react",
-        "react-dom",
-        "@types/react",
-        "@types/react-dom"
-      ],
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
       "groupName": "React ecosystem"
     },
     {
@@ -199,38 +114,23 @@
     },
     {
       "description": "Let the custom regex manager own the digest-only headless Node image.",
-      "matchManagers": [
-        "dockerfile"
-      ],
-      "matchFileNames": [
-        "tools/headless/Dockerfile"
-      ],
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": ["tools/headless/Dockerfile"],
       "enabled": false
     },
     {
       "description": "Review Trivy release updates manually because the archive checksum must be refreshed.",
-      "matchPackageNames": [
-        "aquasecurity/trivy"
-      ],
+      "matchPackageNames": ["aquasecurity/trivy"],
       "automerge": false,
-      "labels": [
-        "dependencies",
-        "area:ci",
-        "area:security",
-        "risk:medium"
-      ]
+      "labels": ["dependencies", "area:ci", "area:security", "risk:medium"]
     }
   ],
   "customManagers": [
     {
       "customType": "regex",
       "description": "Update the pinned Renovate config validator version.",
-      "managerFilePatterns": [
-        "/^package\\.json$/"
-      ],
-      "matchStrings": [
-        "renovate@(?<currentValue>\\d+\\.\\d+\\.\\d+)"
-      ],
+      "managerFilePatterns": ["/^package\\.json$/"],
+      "matchStrings": ["renovate@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
       "depNameTemplate": "renovate",
       "datasourceTemplate": "npm",
       "versioningTemplate": "semver"
@@ -242,9 +142,7 @@
         "/^\\.pre-commit-config\\.yaml$/",
         "/^\\.github/workflows/semgrep\\.yml$/"
       ],
-      "matchStrings": [
-        "semgrep==(?<currentValue>\\d+\\.\\d+\\.\\d+)"
-      ],
+      "matchStrings": ["semgrep==(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
       "depNameTemplate": "semgrep",
       "datasourceTemplate": "pypi",
       "versioningTemplate": "semver"
@@ -252,12 +150,8 @@
     {
       "customType": "regex",
       "description": "Update the pinned Snyk CLI used by the security workflow.",
-      "managerFilePatterns": [
-        "/^package\\.json$/"
-      ],
-      "matchStrings": [
-        "snyk@(?<currentValue>\\d+\\.\\d+\\.\\d+)"
-      ],
+      "managerFilePatterns": ["/^package\\.json$/"],
+      "matchStrings": ["snyk@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
       "depNameTemplate": "snyk",
       "datasourceTemplate": "npm",
       "versioningTemplate": "semver"
@@ -265,9 +159,7 @@
     {
       "customType": "regex",
       "description": "Update the version and digest of the non-root headless Node image.",
-      "managerFilePatterns": [
-        "/^tools\\/headless\\/Dockerfile$/"
-      ],
+      "managerFilePatterns": ["/^tools\\/headless\\/Dockerfile$/"],
       "matchStrings": [
         "# renovate: datasource=docker depName=(?<depName>\\S+)\\n# version: (?<currentValue>\\S+)\\nFROM (?<packageName>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
@@ -277,12 +169,8 @@
     {
       "customType": "regex",
       "description": "Update the pinned Codecov CLI used by both report uploads.",
-      "managerFilePatterns": [
-        "/^\\.github/workflows/codecov\\.yml$/"
-      ],
-      "matchStrings": [
-        "version: v(?<currentValue>\\d+\\.\\d+\\.\\d+)"
-      ],
+      "managerFilePatterns": ["/^\\.github/workflows/codecov\\.yml$/"],
+      "matchStrings": ["version: v(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
       "depNameTemplate": "codecov/codecov-cli",
       "datasourceTemplate": "github-releases",
       "versioningTemplate": "semver"
@@ -290,12 +178,8 @@
     {
       "customType": "regex",
       "description": "Update the pinned pre-commit runner used by workflow security CI.",
-      "managerFilePatterns": [
-        "/^\\.github/workflows/workflow-security\\.yml$/"
-      ],
-      "matchStrings": [
-        "pre-commit==(?<currentValue>\\d+\\.\\d+\\.\\d+)"
-      ],
+      "managerFilePatterns": ["/^\\.github/workflows/workflow-security\\.yml$/"],
+      "matchStrings": ["pre-commit==(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
       "depNameTemplate": "pre-commit",
       "datasourceTemplate": "pypi",
       "versioningTemplate": "semver"
@@ -303,9 +187,7 @@
     {
       "customType": "regex",
       "description": "Update the checksum-pinned Trivy release version; checksum review remains manual.",
-      "managerFilePatterns": [
-        "/^scripts/run-trivy-config-scan\\.sh$/"
-      ],
+      "managerFilePatterns": ["/^scripts/run-trivy-config-scan\\.sh$/"],
       "matchStrings": [
         "# renovate: datasource=github-releases depName=(?<depName>\\S+)\\nTRIVY_VERSION='(?<currentValue>\\d+\\.\\d+\\.\\d+)'"
       ],
