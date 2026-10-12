@@ -15,15 +15,23 @@
     "enabled": true,
     "prCreation": "immediate",
     "automerge": false,
-    "labels": ["dependencies", "security", "priority:P1", "theme:supply-chain"]
+    "labels": ["dependencies", "security", "risk:high", "requires-review"],
+    "vulnerabilityFixStrategy": "highest"
   },
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": ["before 5am on monday"],
     "automerge": false,
-    "labels": ["dependencies", "area:ci", "theme:supply-chain"]
+    "labels": ["dependencies", "area:ci", "theme:supply-chain"],
+    "addLabels": ["automerge:enabled", "risk:low"]
   },
   "packageRules": [
+    {
+      "description": "Delegate low-risk dependency merging to Mergify.",
+      "matchUpdateTypes": ["patch", "digest", "pin"],
+      "automerge": false,
+      "addLabels": ["automerge:enabled", "risk:low"]
+    },
     {
       "description": "Do not auto-raise the supported VS Code or Node runtime floor.",
       "matchManagers": ["npm"],
@@ -45,25 +53,25 @@
     {
       "description": "Automerge low-risk patch, pin, and digest updates after protected checks pass.",
       "matchUpdateTypes": ["patch", "pin", "digest"],
-      "automerge": true,
+      "automerge": false,
       "automergeType": "pr",
-      "labels": ["dependencies", "risk:low"]
+      "addLabels": ["dependencies", "risk:low", "automerge:enabled"]
     },
     {
       "description": "Automerge minor development-tool updates after protected checks pass.",
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["minor"],
-      "automerge": true,
+      "automerge": false,
       "automergeType": "pr",
-      "labels": ["dependencies", "area:ci", "risk:low"]
+      "addLabels": ["dependencies", "area:ci", "risk:low", "automerge:enabled"]
     },
     {
       "description": "Automerge non-major GitHub Action updates while keeping immutable digests.",
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["digest", "patch", "minor"],
-      "automerge": true,
+      "automerge": false,
       "automergeType": "pr",
-      "labels": ["dependencies", "area:ci", "theme:supply-chain"]
+      "addLabels": ["dependencies", "area:ci", "theme:supply-chain", "automerge:enabled"]
     },
     {
       "description": "Review major updates manually.",
@@ -187,5 +195,9 @@
       "versioningTemplate": "semver",
       "extractVersionTemplate": "^v?(?<version>.*)$"
     }
-  ]
+  ],
+  "automerge": false,
+  "automergeType": "pr",
+  "platformAutomerge": false,
+  "osvVulnerabilityAlerts": false
 }
