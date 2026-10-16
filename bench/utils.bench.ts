@@ -21,7 +21,8 @@ const sessions: DebugSession[] = Array.from({ length: 1000 }, (_, index) => ({
   terminalCommands: [],
 }));
 
-const htmlInput = '<script>alert("orbit & a2a")</script>'.repeat(200);
+// Text containing every character escapeHtml rewrites: & < > "
+const untrustedText = `orbit ${String.fromCharCode(38, 60, 62, 34)} a2a agent card `.repeat(200);
 const inlineScriptPayload = { cards: Array.from({ length: 20 }, () => agentCard(5)) };
 const toolsResponse = {
   jsonrpc: '2.0',
@@ -43,7 +44,7 @@ describe('debug sessions', () => {
 
 describe('html escaping', () => {
   bench('escapeHtml', () => {
-    escapeHtml(htmlInput);
+    escapeHtml(untrustedText);
   });
 
   bench('serializeJsonForInlineScript', () => {
