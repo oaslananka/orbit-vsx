@@ -11,6 +11,7 @@ Monitor companion services, inspect Agent Cards, and expose bounded tools to age
   <a href="https://github.com/oaslananka/orbit-vsx/actions/workflows/semgrep.yml"><img src="https://github.com/oaslananka/orbit-vsx/actions/workflows/semgrep.yml/badge.svg" alt="Semgrep status"></a>
   <a href="https://app.codecov.io/gh/oaslananka/orbit-vsx"><img src="https://codecov.io/gh/oaslananka/orbit-vsx/branch/main/graph/badge.svg" alt="Codecov coverage"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/oaslananka/orbit-vsx"><img src="https://api.scorecard.dev/projects/github.com/oaslananka/orbit-vsx/badge" alt="OpenSSF Scorecard"></a>
+  <a href="https://app.codspeed.io/oaslananka/orbit-vsx?utm_source=badge"><img src="https://img.shields.io/endpoint?url=https://codspeed.io/badge.json" alt="CodSpeed"/></a>
 </p>
 
 <p>

@@ -108,3 +108,12 @@ URLs in issues, pull requests, logs, screenshots, or test fixtures. Follow
 ## Quality observability
 
 See [`docs/CODECOV.md`](docs/CODECOV.md) for local LCOV, JUnit Test Analytics, and production bundle verification.
+
+## Performance benchmarks
+
+CPU benchmarks for the pure extension-host logic (Agent Card validation,
+canonicalization and signature verification, URL safety, audit formatting,
+JSON-RPC parsing, and debug session grouping) live in `bench/` and use Vitest
+with the CodSpeed plugin. Run them locally with `corepack pnpm run bench`. The
+`CodSpeed` workflow runs the same suite in CI and reports results on pull
+requests.
