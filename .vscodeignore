@@ -48,3 +48,5 @@ sonar-project.properties
 scripts/
 tools/
 docs/superpowers/
+bench/
+vitest.config.mts

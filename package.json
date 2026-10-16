@@ -659,6 +659,7 @@
     "security:workflow": "pre-commit run actionlint --all-files && pre-commit run shellcheck --all-files && pre-commit run zizmor --all-files",
     "security:trivy": "bash scripts/run-trivy-config-scan.sh",
     "security:snyk": "corepack pnpm dlx snyk@1.1306.1 test --all-projects --dev --severity-threshold=high",
+    "bench": "vitest bench --run",
     "test": "node ./test/runTests.js",
     "test:unit": "mocha --ui tdd \"test/unit/**/*.test.js\"",
     "test:compile": "node test/cleanGenerated.mjs && tsc -p test/tsconfig.json && node test/normalizeGenerated.mjs",
@@ -686,6 +687,7 @@
   },
   "devDependencies": {
     "@codecov/bundle-analyzer": "2.0.1",
+    "@codspeed/vitest-plugin": "6.0.1",
     "@types/mocha": "10.0.10",
     "@types/node": "22.20.5",
     "@types/react": "18.3.31",
@@ -704,7 +706,8 @@
     "mocha": "11.8.0",
     "ovsx": "1.2.0",
     "prettier": "3.9.9",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "4.1.11"
   },
   "capabilities": {
     "untrustedWorkspaces": {
