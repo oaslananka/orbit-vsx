@@ -60,7 +60,13 @@ suite('Workflow Security Contracts', () => {
     assert.match(workflow, /^permissions:\n  contents: read$/m);
     assert.match(workflow, /name: actionlint, ShellCheck, zizmor, and Trivy/);
     assert.match(workflow, /timeout-minutes: 15/);
-    assert.match(workflow, /pre-commit==4\.6\.0/);
+    assert.match(
+      workflow,
+      /pip install --disable-pip-version-check --require-hashes -r \.github\/requirements-pre-commit\.txt/
+    );
+    const requirements = read('.github/requirements-pre-commit.txt');
+    assert.match(requirements, /^pre-commit==4\.6\.2 \\/m);
+    assert.match(requirements, /--hash=sha256:[a-f0-9]{64}/);
     assert.match(workflow, /pre-commit run actionlint --all-files/);
     assert.match(workflow, /pre-commit run shellcheck --all-files/);
     assert.match(workflow, /pre-commit run zizmor --all-files/);

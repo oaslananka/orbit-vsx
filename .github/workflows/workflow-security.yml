@@ -28,7 +28,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pinned pre-commit runner
-        run: python3 -m pip install --disable-pip-version-check 'pre-commit==4.6.0'
+        run: python3 -m pip install --disable-pip-version-check --require-hashes -r .github/requirements-pre-commit.txt
 
       - name: Validate workflow syntax and expressions
         run: pre-commit run actionlint --all-files
