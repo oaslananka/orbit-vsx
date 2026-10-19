@@ -1,30 +1,35 @@
-## Security Remediation Summary
+## Remediation Complete: Converge Orbit Dependency Automation Bootstrap #171
 
-### Fixed: Vulnerabilities Finding (GHSA-vfj7-8cjw-p6xm / CVE-2026-93687)
+### Changes Made
 
-**Issue:** The `braces` package (v3.0.3) had a stack-exhaustion DoS vulnerability (CVE-2026-93687) in recursive AST walkers lacking depth guards.
+**1. `renovate.json`** - Applied Prettier formatting to compact array syntax (single-line arrays) for consistency with the repository's code style.
 
-**Resolution:** Overrode the `braces` dependency to use the fixed commit from upstream (micromatch/braces#28d440b5dd449dbf1fe6f3506cf94ecca4d02660) which implements:
+**2. `test/unit/security-tooling-contract.test.ts`** - Updated the test assertion for the "explicit safe lane" to match the new Mergify-based architecture:
+- Added `addLabels` to the `RenovatePackageRule` interface
+- Changed the test to verify `automerge: false` with `addLabels: ["automerge:enabled"]` instead of `automerge: true`
+- Updated assertion message to clarify the Mergify-based safe lane pattern
 
-- `maxDepth` option (default 100) to limit nesting depth
-- Cycle detection in AST parent chains
-- Depth tracking in parse, compile, expand, and stringify functions
+### Architecture Preserved
 
-**Files Changed:**
+The changes maintain the intended dependency automation architecture exactly:
+- **Renovate** produces dependency PRs but does NOT merge them (`automerge: false`, `platformAutomerge: false`)
+- **Mergify** is the queue/merge authority using `merge_protections_settings.auto_merge_conditions`
+- Required branch protections/checks remain authoritative
+- Major, security/runtime-risk, workflow/Docker/config-sensitive updates remain manual (excluded via labels and file patterns in `.mergify.yml`)
 
-- `pnpm-workspace.yaml`: Added `braces` override pointing to fixed commit
-- `.npmrc`: Added `block-exotic-subdeps=false` to allow git dependency in subdependencies
-- `pnpm-lock.yaml`: Updated with resolved git dependency
+### Verification Results
 
-**Verification:**
+All local verification commands pass:
 
-- All unit tests pass (158 passing)
-- Full verification chain passes (`verify:headless`)
-- Semgrep security scan passes
-- Workflow security checks (actionlint, shellcheck, zizmor) pass
-- Trivy config scan passes
-- ESLint, TypeScript typecheck, Prettier format check all pass
+| Command | Status |
+|---------|--------|
+| `format:check` | ✅ Pass |
+| `lint` | ✅ Pass |
+| `typecheck` | ✅ Pass |
+| `test:unit` | ✅ 169 passing |
+| `coverage` | ✅ 79.27% statements |
+| `build` | ✅ Pass |
+| `verify:headless` | ✅ Full suite passes (including integration & smoke tests) |
+| `validate:renovate` | ✅ Config validated successfully |
 
-### Branch-Protection Finding
-
-**Status:** Out of scope per issue description ("Do not change branch protection, security settings, required checks, or admission policy"). This finding relates to GitHub repository branch protection configuration which is managed separately from code changes.
+The PR at commit `93875b3ae7c90cad51e42f508510668a2508dcb5` on branch `chore/dependency-convergence-2026` should now pass all CI gates (Node 22/VS Code 1.100, Node 24/VS Code stable, Coverage/tests/bundles).
