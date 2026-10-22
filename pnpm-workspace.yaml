@@ -19,7 +19,7 @@ overrides:
   'brace-expansion@>=3.0.0 <5.0.7': 5.0.12
   fast-uri: 3.1.8
   qs: 6.16.0
-  markdown-it: 14.3.2
+  markdown-it: 14.3.3
 patchedDependencies:
   braces@3.0.3: patches/braces@3.0.3.patch
 allowBuilds:
