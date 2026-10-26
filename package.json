@@ -697,7 +697,7 @@
     "@vscode/test-electron": "2.5.2",
     "@vscode/vsce": "3.9.3-12",
     "c8": "11.0.0",
-    "concurrently": "10.0.5",
+    "concurrently": "10.0.6",
     "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "fast-check": "4.9.0",
